@@ -1,14 +1,18 @@
+'''
+FIXME: naming issue especially due to the self.turn variable
+TODO: Create a client to use the game and remove usage logic from the game class
+''' 
 from enum import Enum
 from collections import Counter
 from dataclasses import dataclass
 import random
 
 ''' Cards (Source Wikipedia)
-Circles     1   2   3   4   5       7   8       10  11  12  13  14
-Triangles   1   2   3   4   5       7   8       10  11  12  13  14
-Crosses     1   2   3       5       7           10  11      13  14
-Squares     1   2   3       5       7           10  11      13  14
-Stars       1   2   3   4   5       7   8                    
+Circles     1   2   3   4   5      7   8      10  11  12  13  14
+Triangles   1   2   3   4   5      7   8      10  11  12  13  14
+Crosses     1   2   3       5      7          10  11      13  14
+Squares     1   2   3       5      7          10  11      13  14
+Stars       1   2   3   4   5      7   8       
 5 "Whot" cards numbered 20
 '''
 
