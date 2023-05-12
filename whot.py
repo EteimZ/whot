@@ -25,8 +25,11 @@ class Suit(Enum):
     ANGLE = 4
     WHOT = 5
 
+    def __str__(self):
+        return self.name
+
     def __repr__(self):
-        return f'{self.name}'
+        return self.name
 
 @dataclass
 class Card:
@@ -34,6 +37,11 @@ class Card:
     face: int
 
     # Add a method for equality
+    def same(self, other):
+        """
+        Check if two cards are of the same suit or face
+        """
+        return self.suit == other.suit or self.face == other.face
 
     def __repr__(self):
         return f'{self.face} {self.suit.name}'
@@ -125,7 +133,7 @@ class Game:
         deck.shuffle()
         self.players = players
         for p in self.players:
-            p.recieve(deck.deal_card(4))
+            p.recieve(deck.deal_card(3))
         self.pile = deck.deal_card(1)
         self.gen = deck
         self.turn = self.players[0]
@@ -140,7 +148,7 @@ class Game:
                 self.turn.recieve(self.gen.deal_card(1))
             else:
                 try:
-                    if self.turn._cards[inp].face == self.pile[-1].face or self.turn._cards[inp].suit == self.pile[-1].suit:
+                    if self.turn._cards[inp].same(self.pile[-1]) or self.turn._cards[inp].suit == Suit.WHOT:
                         self.pile.append(self.turn._cards[inp])
                         self.turn._cards.remove(self.turn._cards[inp])
                     
@@ -152,31 +160,47 @@ class Game:
                             other_player.recieve(recieved_card)
 
                         if self.pile[-1].face == 14:
-                            print(f"{self.opposite(self.turn.player_id)} Go Gen: ")
+                            print(f"{self.opposite(self.turn)} Go Gen: ")
                             other_player = self.opposite(self.turn)
                             recieved_card = self.gen.deal_card(1)
-                            print(f"{self.opposite(self.turn.player_id)} you recieved: {recieved_card}")
+                            print(f"{self.opposite(self.turn)} you recieved: {recieved_card}")
                             other_player.recieve(recieved_card)
                     
                         if self.pile[-1].face == 8:
                             # temporary logic
-                            print(f"{self.opposite(self.turn.player_id)} has been suspended: ")
+                            print(f"{self.opposite(self.turn)} has been suspended: ")
                             self.swap(self.turn)
                     
                         if self.pile[-1].face == 1:
                             # add an edge case to check if the player provides a another one
                             # Add logic to catch when 1 is the last card
-                            print(f"{self.opposite(self.turn.player_id)} Hold on: ")
-                            inp = int(input(f"{self.turn.player_id} Please input any card index of your choice: "))
+                            print(f"{self.opposite(self.turn)} Hold on: ")
+                            inp = int(input(f"{self.turn} Please input any card index of your choice: "))
                             self.pile.append(self.turn._cards[inp])
                             self.turn._cards.remove(self.turn._cards[inp])
-                            print(f"{self.opposite(self.turn.player_id)} Resume")
-                        '''
+                            print(f"{self.opposite(self.turn)} Resume")
+                
                         if self.pile[-1] == Card(Suit.WHOT, 20):
-                            print(f"{self.turn.player_id} ask {self.opposite(self.turn.player_id)} for any card of your choice")
-                            face = input(f"Face of the card: ")
-                            suit = input(f"Face of the card: ")
-                        '''
+                            print(f"{self.turn} ask {self.opposite(self.turn)} for any card suit of your choice")
+                            suit = input("Suit of the card(STAR, CIRCLE, ANGLE, SQUARE, CROSS): ")
+                            print(f"{self.opposite(self.turn)._cards}")
+                            inp = int(input(f"{self.opposite(self.turn)} select a card with suit of {suit}: "))
+                            returned_card = self.opposite(self.turn)._cards[inp]
+                            
+                            if str(returned_card.suit) == suit:
+                                self.opposite(self.turn)._cards.remove(returned_card)
+                                self.pile.append(returned_card)
+                                self.swap(self.turn)
+                            else:
+                                print(f"{self.opposite(self.turn)} doesn't have the card. You go gen")
+                                self.opposite(self.turn).recieve(self.gen.deal_card(1))
+                                print(f"{self.opposite(self.turn)} you recieved: {self.opposite(self.turn)._cards[-1]}")
+                                print(f"{self.turn} play any card of your choice: " )
+                                print(f"{self.turn._cards}")
+                                inp = int(input("Please input card index: "))
+                                self.pile.append(self.turn._cards[inp])
+                                self.turn._cards.remove(self.turn._cards[inp])
+                            
                     else:
                         print("Card doesn't match top of pile")
                         self.swap(self.turn)
@@ -201,10 +225,6 @@ class Game:
             return self.players[1]
         else:
             return self.players[0]
-
-
-
-
 
 p = Player("Eteims")
 p2 = Player("Jacob")
