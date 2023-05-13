@@ -1,6 +1,7 @@
 '''
-FIXME: naming issue especially due to the self.turn variable
 TODO: Create a client to use the game and remove usage logic from the game class
+FIXME: Fix all edge cases in the hold_on and whot method
+TODO: Refactpr the Game class
 ''' 
 from enum import Enum
 from collections import Counter
@@ -104,12 +105,12 @@ class Player:
     '''
 
     def __init__(self, player_id):
-        self._cards = []
-        self.player_id = player_id
+        self._cards : list[Card] = []
+        self.player_id : int = player_id
 
     def transfer(self, n):
         card = self._cards[n]
-        self.cards.remove(card)
+        self._cards.remove(card)
         return card
 
     def recieve(self, card: list[Card]):
@@ -135,99 +136,157 @@ class Game:
     
     def __init__(self, deck: Deck, players: list[Player]):
         deck.shuffle()
-        self.players = players
+        self.players: list[Player] = players
         for p in self.players:
             p.recieve(deck.deal_card(3))
-        self.pile = deck.deal_card(1)
+        self.pile: list[Card] = deck.deal_card(1)
         self.gen = deck
-        self.turn = self.players[0]
+        self.current_player: Player = self.players[0]
 
     def play(self):
-        while len(self.players[0]._cards) != 0 and len(self.players[1]._cards) != 0 :
+        while True:
             print(f'Pile: {self.pile[-1]}')
-            print(f'{self.turn.player_id}: {self.turn._cards}')
+            print(f'{self.current_player.player_id}: {self.current_player._cards}')
             print()
             inp = int(input("Please input card index or -1 to go gen: "))
             if inp == -1:
-                self.turn.recieve(self.gen.deal_card(1))
+                self.current_player.recieve(self.gen.deal_card(1))
             else:
                 try:
-                    if self.turn._cards[inp].same(self.pile[-1]) or self.turn._cards[inp].suit == Suit.WHOT:
-                        self.pile.append(self.turn._cards[inp])
-                        self.turn._cards.remove(self.turn._cards[inp])
+                    if self.current_player._cards[inp].same(self.pile[-1]) or self.current_player._cards[inp].suit == Suit.WHOT:
+                        self.pile.append(self.current_player._cards[inp])
+                        self.current_player._cards.remove(self.current_player._cards[inp])
                     
                         if self.pile[-1].face == 2:
-                            print(f"{self.opposite(self.turn)} Pick two: ")
-                            other_player = self.opposite(self.turn)
-                            recieved_card = self.gen.deal_card(2)
-                            print(f"{self.opposite(self.turn.player_id)} you recieved: {recieved_card}")
-                            other_player.recieve(recieved_card)
+                            self.handle_pick_two()
 
                         if self.pile[-1].face == 14:
-                            print(f"{self.opposite(self.turn)} Go Gen: ")
-                            other_player = self.opposite(self.turn)
-                            recieved_card = self.gen.deal_card(1)
-                            print(f"{self.opposite(self.turn)} you recieved: {recieved_card}")
-                            other_player.recieve(recieved_card)
+                            self.handle_go_gen()
                     
                         if self.pile[-1].face == 8:
                             # temporary logic
-                            print(f"{self.opposite(self.turn)} has been suspended: ")
-                            self.swap(self.turn)
+                            self.handle_suspension()
                     
                         if self.pile[-1].face == 1:
-                            # add an edge case to check if the player provides a another one
-                            # Add logic to catch when 1 is the last card
-                            print(f"{self.opposite(self.turn)} Hold on: ")
-                            inp = int(input(f"{self.turn} Please input any card index of your choice: "))
-                            self.pile.append(self.turn._cards[inp])
-                            self.turn._cards.remove(self.turn._cards[inp])
-                            print(f"{self.opposite(self.turn)} Resume")
+                            self.handle_hold_on()
                 
                         if self.pile[-1] == Card(Suit.WHOT, 20):
-                            print(f"{self.turn} ask {self.opposite(self.turn)} for any card suit of your choice")
-                            suit = input("Suit of the card(STAR, CIRCLE, ANGLE, SQUARE, CROSS): ")
-                            print(f"{self.opposite(self.turn)._cards}")
-                            inp = int(input(f"{self.opposite(self.turn)} select a card with suit of {suit}: "))
-                            returned_card = self.opposite(self.turn)._cards[inp]
-                            
-                            if str(returned_card.suit) == suit:
-                                self.opposite(self.turn)._cards.remove(returned_card)
-                                self.pile.append(returned_card)
-                                self.swap(self.turn)
-                            else:
-                                print(f"{self.opposite(self.turn)} doesn't have the card. You go gen")
-                                self.opposite(self.turn).recieve(self.gen.deal_card(1))
-                                print(f"{self.opposite(self.turn)} you recieved: {self.opposite(self.turn)._cards[-1]}")
-                                print(f"{self.turn} play any card of your choice: " )
-                                print(f"{self.turn._cards}")
-                                inp = int(input("Please input card index: "))
-                                self.pile.append(self.turn._cards[inp])
-                                self.turn._cards.remove(self.turn._cards[inp])
-                            
+                            self.handle_whot()
+
                     else:
                         print("Card doesn't match top of pile")
-                        self.swap(self.turn)
+                        self.swap()
 
                 except IndexError:
                     print("You are out of order. Try again")
-                    self.swap(self.turn)
+                    self.swap()
 
+            if self.check_winner():
+                break
+
+            self.swap()
+
+        print(f"{self.current_player} you win.")
+
+    def handle_pick_two(self):
+        """
+        Method to handle giving players pick two
+        """
+        next_player = self.next_player()
+
+        print(f"{next_player} Pick two: ")
+        recieved_card = self.gen.deal_card(2)
+        next_player.recieve(recieved_card)
+        print(f"{next_player} you recieved: {recieved_card}")
         
-            self.swap(self.turn)
+    def handle_go_gen(self):
+        """
+        Method to handle going gen
+        """
 
-        print(f"{self.turn} you win.")
+        next_player = self.next_player()
 
-    def swap(self, current_player):
-        if current_player == self.players[0]:
-            self.turn = self.players[1]
+        print(f"{next_player} Go Gen: ")
+        recieved_card = self.gen.deal_card(1)
+        next_player.recieve(recieved_card)
+        print(f"{next_player} you recieved: {recieved_card}") 
+        
+
+    def handle_suspension(self):
+        """
+        Method to handle suspension
+        """
+        next_player = self.next_player()
+
+        print(f"{next_player} has been suspended: ")
+        self.swap()
+        # self.swap() # This is to skip the suspended player(temporary)
+
+    def handle_hold_on(self):
+        """
+        Method to handle hold on
+        """
+
+        next_player = self.next_player()
+
+        # add an edge case to check if the player provides a another one
+        # Add logic to catch when 1 is the last card
+        print(f"{next_player} Hold on: ")
+        print(f"{self.current_player._cards}" )
+        inp = int(input(f"{self.current_player} Please input any card index of your choice: "))
+        self.pile.append(self.current_player._cards[inp])
+        self.current_player._cards.remove(self.current_player._cards[inp])
+        print(f"{next_player} Resume")
+
+    def handle_whot(self):
+        """
+        Method to handle whot card
+        """
+
+        next_player = self.next_player()
+
+        print(f"{self.current_player} ask {next_player} for any card suit of your choice")
+        suit = input("Suit of the card(STAR, CIRCLE, ANGLE, SQUARE, CROSS): ")
+        print(f"{next_player._cards}")
+        inp = int(input(f"{next_player} select a card with suit of {suit}: "))
+        returned_card = next_player._cards[inp]
+        
+        if str(returned_card.suit) == suit:
+            next_player._cards.remove(returned_card)
+            self.pile.append(returned_card)
+            self.swap()
         else:
-            self.turn = self.players[0]
-    
-    def opposite(self, current_player):
-        if current_player == self.players[0]:
-            return self.players[1]
-        else:
+            print(f"{next_player} doesn't have the card. You go gen")
+            next_player.recieve(self.gen.deal_card(1))
+            print(f"{next_player} you recieved: {next_player._cards[-1]}")
+            print(f"{self.current_player} play any card of your choice: " )
+            print(f"{self.current_player._cards}")
+            inp = int(input("Please input card index: "))
+            self.pile.append(self.current_player._cards[inp])
+            self.current_player._cards.remove(self.current_player._cards[inp])
+
+
+    def check_winner(self):
+        """
+        This function will be used to check the winner of the game based on who doesn't hac
+        """
+        for player in self.players:
+            if len(player._cards) == 0:
+                return True
+        return False
+
+    def swap(self):
+        n = self.players.index(self.current_player)
+        try:
+            self.current_player = self.players[n+1]
+        except IndexError:
+            self.current_player = self.players[0]
+            
+    def next_player(self):
+        n = self.players.index(self.current_player)
+        try:
+            return self.players[n+1]
+        except IndexError:
             return self.players[0]
 
 p = Player("Eteims")
