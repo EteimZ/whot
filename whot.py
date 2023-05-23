@@ -142,10 +142,11 @@ class Game:
         for p in self.players:
             p.recieve(deck.deal_card(3))
         self.pile: list[Card] = deck.deal_card(1)
-        self.gen = deck
+        self.gen: Deck = deck
         self.current_player: Player = self.players[0]
 
     def play(self):
+        self.initial_process()
         while True:
             print(f"Pile: {self.pile[-1]}")
             print(f"{self.current_player.player_id}: {self.current_player._cards}")
@@ -164,76 +165,134 @@ class Game:
                             self.current_player._cards[inp]
                         )
 
-                        if self.pile[-1].face == 2:
-                            self.handle_pick_two()
-
-                        if self.pile[-1].face == 14:
-                            self.handle_go_gen()
-
-                        if self.pile[-1].face == 8:
-                            self.handle_suspension()
-
-                        if self.pile[-1].face == 1:
-                            self.handle_hold_on()
-
-                        if self.pile[-1] == Card(Suit.WHOT, 20):
-                            self.handle_whot()
+                        self.process()
 
                     else:
                         print("Card doesn't match top of pile")
-                        self.swap()
+                        self.next_player()
 
                 except IndexError:
                     print("You are out of order. Try again")
-                    self.swap()
+                    self.next_player()
 
             if self.check_winner():
                 break
 
-            self.swap()
+            self.next_player()
 
-        print(f"{self.current_player} you win.")    
+        print(f"{self.current_player} you win.")
 
-    def handle_pick_two(self):
+    def initial_process(self):
+        """
+        This method handles what will happen to the initial player
+        If the card on the top of the file is a special one.
+        """
+
+        current_player = self.current_player
+        next_player = self.next_player()
+
+        if self.pile[-1].face == 2:
+            # The current player should pick two
+            self.handle_pick_two(current_player)
+
+        if self.pile[-1].face == 14:
+            # All players should go gen
+            self.handle_go_gen()
+
+        if self.pile[-1].face == 8:
+            # The current player should be suspended
+            self.handle_suspension(current_player)
+    
+        if self.pile[-1].face == 1:
+            # The current player can play any card of their choice
+            self.handle_hold_on(next_player)
+
+        if self.pile[-1] == Card(Suit.WHOT, 20):
+            self.handle_whot(next_player)
+
+    def process(self):
+        """
+        This method handles what will happen during the normal game process
+        """
+
+        current_player = self.current_player
+        next_player = self.next_player()
+        
+        if self.pile[-1].face == 2:
+            # The next player should pick two cards
+            self.handle_pick_two(next_player)
+
+        if self.pile[-1].face == 14:
+            # All players should go gen except the current player
+            self.handle_go_gen(current_player)
+
+        if self.pile[-1].face == 8:
+            # Suspend the next player
+            self.handle_suspension(next_player)
+
+        if self.pile[-1].face == 1:
+            # The next player should hold on for the current player
+            self.handle_hold_on(next_player)
+
+        if self.pile[-1] == Card(Suit.WHOT, 20):
+            # The next player should give the current player any card of their choice 
+            self.handle_whot(next_player)
+            
+
+    def handle_pick_two(self, player: Player):
         """
         Method to handle giving players pick two
         """
-        next_player = self.next_player()
+        # get_next_player = self.get_next_player()
 
-        print(f"{next_player} Pick two: ")
+        print(f"{player} Pick two: ")
         recieved_card = self.gen.deal_card(2)
-        next_player.recieve(recieved_card)
-        print(f"{next_player} you recieved: {recieved_card}")
+        player.recieve(recieved_card)
+        print(f"{player} you recieved: {recieved_card}")
 
-    def handle_go_gen(self):
+    def handle_go_gen(self, exempt_player: Player | None = None):
         """
         Method to handle going gen
         """
 
-        next_player = self.next_player()
+        # current_player = self.current_player
+        
+        if exempt_player:
+            gen_list = self.players.copy()
+            gen_list.remove(exempt_player)
+        
+            print(f"All players except {exempt_player} Go Gen: ")
+            for player in gen_list:
+                recieved_card = self.gen.deal_card(1)
+                player.recieve(recieved_card)
+                print(f"{player} you recieved: {recieved_card}")
 
-        print(f"{next_player} Go Gen: ")
-        recieved_card = self.gen.deal_card(1)
-        next_player.recieve(recieved_card)
-        print(f"{next_player} you recieved: {recieved_card}")
+        else:
+            print(f"Everyone Go Gen: ")
+            for player in self.players:
+                recieved_card = self.gen.deal_card(1)
+                player.recieve(recieved_card)
+                print(f"{player} you recieved: {recieved_card}")
 
-    def handle_suspension(self):
+
+    def handle_suspension(self, get_next_player: Player):
         """
         Method to handle suspension
         """
-        next_player = self.next_player()
 
-        print(f"{next_player} has been suspended: ")
-        self.swap()
+        # get_next_player = self.get_next_player()
+
+        print(f"{get_next_player} has been suspended: ")
+        self.next_player()
     
-    def handle_hold_on(self):
+    def handle_hold_on(self, get_next_player: Player):
         """
         Method to handle hold on
         """
 
-        next_player = self.next_player()
-
-        print(f"{next_player} Hold on: ")
+        # get_next_player = self.get_next_player()
+        
+        print(f"{get_next_player} Hold on: ")
         print(f"{self.current_player._cards}")
         inp = int(
             input(f"{self.current_player} Please input any card index of your choice: ")
@@ -241,44 +300,44 @@ class Game:
         self.pile.append(self.current_player._cards[inp])
         self.current_player._cards.remove(self.current_player._cards[inp])
         if self.pile[-1].face == 1:
-            self.handle_hold_on()
+            self.handle_hold_on(get_next_player)
         if self.pile[-1].face == 14:
-            self.handle_go_gen()
+            self.handle_go_gen(self.current_player)
         if self.pile[-1].face == 8:
-            self.handle_suspension()
+            self.handle_suspension(get_next_player)
             return
         if self.pile[-1].face == 2:
-            self.handle_pick_two()
+            self.handle_pick_two(get_next_player)
         if self.pile[-1] == Card(Suit.WHOT, 20):
-            self.handle_whot()
+            self.handle_whot(get_next_player)
         if self.current_player._cards == []:
             print(f"{self.current_player} you win")
             return
-        print(f"{next_player} Resume")
+        print(f"{get_next_player} Resume")
 
-    def handle_whot(self):
+    def handle_whot(self, get_next_player: Player):
         """
         Method to handle whot card
         """
 
-        next_player = self.next_player()
+        # get_next_player = self.get_next_player()
 
         print(
-            f"{self.current_player} ask {next_player}  for any card suit of your choice"
+            f"{self.current_player} ask {get_next_player}  for any card suit of your choice"
         )
         suit = input("Suit of the card(STAR, CIRCLE, ANGLE, SQUARE, CROSS): ")
-        print(f"{next_player._cards}")
-        inp = int(input(f"{next_player} select a card with suit of {suit}: "))
-        returned_card = next_player._cards[inp]
+        print(f"{get_next_player._cards}")
+        inp = int(input(f"{get_next_player} select a card with suit of {suit}: "))
+        returned_card = get_next_player._cards[inp]
 
         if str(returned_card.suit) == suit:
-            next_player._cards.remove(returned_card)
+            get_next_player._cards.remove(returned_card)
             self.pile.append(returned_card)
-            self.swap()
+            self.next_player()
         else:
-            print(f"{next_player} doesn't have the card. You go gen")
-            next_player.recieve(self.gen.deal_card(1))
-            print(f"{next_player} you recieved: {next_player._cards[-1]}")
+            print(f"{get_next_player} doesn't have the card. You go gen")
+            get_next_player.recieve(self.gen.deal_card(1))
+            print(f"{get_next_player} you recieved: {get_next_player._cards[-1]}")
             print(f"{self.current_player} play any card of your choice: ")
             print(f"{self.current_player._cards}")
             inp = int(input("Please input card index: "))
@@ -295,14 +354,14 @@ class Game:
                 return True
         return False
 
-    def swap(self):
+    def next_player(self, skip=1):
         n = self.players.index(self.current_player)
         try:
-            self.current_player = self.players[n + 1]
+            self.current_player = self.players[n + skip]
         except IndexError:
             self.current_player = self.players[0]
 
-    def next_player(self):
+    def get_next_player(self):
         n = self.players.index(self.current_player)
         try:
             return self.players[n + 1]
@@ -312,8 +371,8 @@ class Game:
 
 p1 = Player("Eteims")
 p2 = Player("Jacob")
-p3 = Player("Ted")
+# p3 = Player("Ted")
 
 d = Deck()
-g = Game(d, [p1, p2, p3])
+g = Game(d, [p1, p2])
 g.play()
