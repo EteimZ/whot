@@ -189,7 +189,7 @@ class Game:
         """
 
         current_player = self.current_player
-        next_player = self.next_player()
+        next_player = self.get_next_player()
 
         if self.pile[-1].face == 2:
             # The current player should pick two
@@ -216,7 +216,7 @@ class Game:
         """
 
         current_player = self.current_player
-        next_player = self.next_player()
+        next_player = self.get_next_player()
         
         if self.pile[-1].face == 2:
             # The next player should pick two cards
