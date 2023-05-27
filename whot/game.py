@@ -1,128 +1,10 @@
 """
 TODO: Create a client to use the game and remove usage logic from the game class
-FIXME: Fix all edge cases in the whot method
 TODO: Refactor the Game class
-TODO: Handle when first card on pile is special card
-"""
-from enum import Enum
-
-# from collections import Counter
-from dataclasses import dataclass
-import random
-
-""" Cards (Source Wikipedia)
-Circles     1   2   3   4   5      7   8      10  11  12  13  14
-Triangles   1   2   3   4   5      7   8      10  11  12  13  14
-Crosses     1   2   3       5      7          10  11      13  14
-Squares     1   2   3       5      7          10  11      13  14
-Stars       1   2   3   4   5      7   8       
-5 "Whot" cards numbered 20
 """
 
-CIRCLES_AND_TRIANGLES = [1, 2, 3, 4, 5, 7, 8, 10, 11, 12, 13, 14]
-CROSSES_AND_SQUARES = [1, 2, 3, 5, 7, 10, 11, 13, 14]
-STARS = CIRCLES_AND_TRIANGLES[:7]
-
-
-class Suit(Enum):
-    CIRCLE = 0
-    SQUARE = 1
-    STAR = 2
-    CROSS = 3
-    ANGLE = 4
-    WHOT = 5
-
-    def __str__(self):
-        return self.name
-
-    def __repr__(self):
-        return self.name
-
-
-@dataclass
-class Card:
-    suit: Suit
-    face: int
-
-    # Add a method for equality
-    def same(self, other):
-        """
-        Check if two cards are of the same suit or face
-        """
-        return self.suit == other.suit or self.face == other.face
-
-    def __repr__(self):
-        return f"{self.face} {self.suit.name}"
-
-
-class Deck:
-    def __init__(self):
-        self.cards = []
-        self._create_deck()
-
-    def shuffle(self):
-        random.shuffle(self.cards)
-
-    def deal_card(self, n: int):
-        """
-        Deal n amount of cards
-        """
-
-        length = len(self.cards)
-        if n > length:
-            pass
-
-        deal_cards = self.cards[length - n:]
-        self.cards = self.cards[: length - n]
-        return deal_cards
-
-    def _create_deck(self):
-        # Create angle and circle cards
-        angles = [Card(Suit.ANGLE, angle) for angle in CIRCLES_AND_TRIANGLES]
-        circles = [Card(Suit.CIRCLE, circle) for circle in CIRCLES_AND_TRIANGLES]
-
-        # Create cross and square cards
-        crosses = [Card(Suit.CROSS, cross) for cross in CROSSES_AND_SQUARES]
-        squares = [Card(Suit.SQUARE, square) for square in CROSSES_AND_SQUARES]
-
-        # Create star cards
-
-        stars = [Card(Suit.STAR, star) for star in STARS]
-
-        # Create whot cards
-        whots = [Card(Suit.WHOT, 20) for _ in range(5)]
-
-        # Place all cards together
-        self.cards.extend(angles + circles + crosses + squares + stars + whots)
-
-
-class Player:
-    """
-    A player has:
-    1. an id
-    2. cards
-    3. a method to transfer card(s)
-    4. a method to recieve card(s)
-    5. print cards
-    """
-
-    def __init__(self, player_id):
-        self._cards: list[Card] = []
-        self.player_id: int = player_id
-
-    def transfer(self, n):
-        card = self._cards[n]
-        self._cards.remove(card)
-        return card
-
-    def recieve(self, card: list[Card]):
-        self._cards.extend(card)
-
-    def disp(self):
-        print(self._cards)
-
-    def __repr__(self):
-        return f"{self.player_id}"
+from .deck import Deck, Card, Suit
+from .player import Player
 
 
 class Game:
@@ -210,6 +92,8 @@ class Game:
         if self.pile[-1] == Card(Suit.WHOT, 20):
             self.handle_whot(next_player)
 
+        return
+
     def process(self):
         """
         This method handles what will happen during the normal game process
@@ -237,8 +121,9 @@ class Game:
         if self.pile[-1] == Card(Suit.WHOT, 20):
             # The next player should give the current player any card of their choice 
             self.handle_whot(next_player)
-            
-
+        
+        return
+    
     def handle_pick_two(self, player: Player):
         """
         Method to handle giving players pick two
@@ -275,24 +160,20 @@ class Game:
                 print(f"{player} you recieved: {recieved_card}")
 
 
-    def handle_suspension(self, get_next_player: Player):
+    def handle_suspension(self, player: Player):
         """
-        Method to handle suspension
+        Method to handle suspension for a particular player
         """
 
-        # get_next_player = self.get_next_player()
-
-        print(f"{get_next_player} has been suspended: ")
+        print(f"{player} has been suspended: ")
         self.next_player()
     
-    def handle_hold_on(self, get_next_player: Player):
+    def handle_hold_on(self, player: Player):
         """
         Method to handle hold on
         """
 
-        # get_next_player = self.get_next_player()
-        
-        print(f"{get_next_player} Hold on: ")
+        print(f"{player} Hold on: ")
         print(f"{self.current_player._cards}")
         inp = int(
             input(f"{self.current_player} Please input any card index of your choice: ")
@@ -300,49 +181,66 @@ class Game:
         self.pile.append(self.current_player._cards[inp])
         self.current_player._cards.remove(self.current_player._cards[inp])
         if self.pile[-1].face == 1:
-            self.handle_hold_on(get_next_player)
+            self.handle_hold_on(player)
         if self.pile[-1].face == 14:
             self.handle_go_gen(self.current_player)
         if self.pile[-1].face == 8:
-            self.handle_suspension(get_next_player)
+            self.handle_suspension(player)
             return
         if self.pile[-1].face == 2:
-            self.handle_pick_two(get_next_player)
+            self.handle_pick_two(player)
         if self.pile[-1] == Card(Suit.WHOT, 20):
-            self.handle_whot(get_next_player)
+            self.handle_whot(player)
         if self.current_player._cards == []:
-            print(f"{self.current_player} you win")
             return
-        print(f"{get_next_player} Resume")
+        
+        print(f"{player} Resume")
 
-    def handle_whot(self, get_next_player: Player):
+    def handle_whot(self, player: Player):
         """
         Method to handle whot card
         """
 
-        # get_next_player = self.get_next_player()
-
         print(
-            f"{self.current_player} ask {get_next_player}  for any card suit of your choice"
+            f"{self.current_player} ask {player}  for any card suit of your choice"
         )
+        print(f"{self.current_player}: {self.current_player._cards}")
         suit = input("Suit of the card(STAR, CIRCLE, ANGLE, SQUARE, CROSS): ")
-        print(f"{get_next_player._cards}")
-        inp = int(input(f"{get_next_player} select a card with suit of {suit}: "))
-        returned_card = get_next_player._cards[inp]
+        print(player._cards)
+        inp = int(input(f"{player} select a card with suit of {suit}: "))
+        returned_card = player._cards[inp]
 
         if str(returned_card.suit) == suit:
-            get_next_player._cards.remove(returned_card)
+            player._cards.remove(returned_card)
             self.pile.append(returned_card)
-            self.next_player()
+
+            awarded_player = self.current_player
+            self.current_player = player
+            
+            if returned_card.face == 1:
+                self.handle_hold_on(awarded_player)
+            if returned_card.face == 14:
+                self.handle_go_gen(player)
+            if returned_card.face == 8:
+                self.handle_suspension(awarded_player)
+                return
+            if returned_card.face == 2:
+                self.handle_pick_two(awarded_player)
+            if returned_card == Card(Suit.WHOT, 20):
+                self.handle_whot(awarded_player)
+
+
+            # self.next_player()
         else:
-            print(f"{get_next_player} doesn't have the card. You go gen")
-            get_next_player.recieve(self.gen.deal_card(1))
-            print(f"{get_next_player} you recieved: {get_next_player._cards[-1]}")
+            print(f"{player} doesn't have the card. You go gen")
+            player.recieve(self.gen.deal_card(1))
+            print(f"{player} you recieved: {player._cards[-1]}")
             print(f"{self.current_player} play any card of your choice: ")
             print(f"{self.current_player._cards}")
             inp = int(input("Please input card index: "))
             self.pile.append(self.current_player._cards[inp])
             self.current_player._cards.remove(self.current_player._cards[inp])
+            self.process()
 
     def check_winner(self):
         """
@@ -367,12 +265,3 @@ class Game:
             return self.players[n + 1]
         except IndexError:
             return self.players[0]
-
-
-p1 = Player("Eteims")
-p2 = Player("Jacob")
-# p3 = Player("Ted")
-
-d = Deck()
-g = Game(d, [p1, p2])
-g.play()
