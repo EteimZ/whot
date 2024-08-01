@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Whot Game</title>
+</head>
+<body>
+    <h1>Welcome to the Whot Game</h1>
+    <script>
+        const ws = new WebSocket('ws://localhost:8765');
+        ws.onopen = () => {
+            console.log('Connected to the server');
+            ws.send('Hello Server');
+        };
+        ws.onmessage = (message) => {
+            console.log('Received:', message.data);
+        };
+    </script>
+</body>
+</html>
+
