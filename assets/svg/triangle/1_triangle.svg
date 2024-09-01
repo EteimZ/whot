@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="100.26981mm"
+   height="122.37403mm"
+   viewBox="0 0 100.26981 122.37403"
+   version="1.1"
+   id="svg1"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs1" />
+  <g
+     id="layer1"
+     transform="translate(-363.53748,-363.53737)">
+    <rect
+       style="fill:#ffffff;fill-opacity:1;stroke:#b80000;stroke-width:0.600001;stroke-miterlimit:5.3;stroke-opacity:1"
+       id="rect104"
+       width="99.669823"
+       height="121.77402"
+       x="363.83749"
+       y="363.83737"
+       ry="6.0284162" />
+    <path
+       style="fill:#b80000;fill-opacity:1;stroke:#b80000;stroke-width:0.600001;stroke-miterlimit:5.3;stroke-opacity:1"
+       id="path108-3-3"
+       d="m 389.04557,399.27613 -30.23955,-4.13904 18.7043,-24.1187 z"
+       transform="matrix(1.6028959,1.9537649,-2.0988446,1.5166921,627.6227,-899.30677)" />
+    <path
+       style="fill:#b80000;fill-opacity:1;stroke:#b80000;stroke-width:0.600001;stroke-miterlimit:5.3;stroke-opacity:1"
+       id="path108-3"
+       d="m 389.04557,399.27613 -30.23955,-4.13904 18.7043,-24.1187 z"
+       transform="matrix(0.29187424,0.37806132,-0.38218245,0.29348597,486.68025,198.58732)" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:22.4955px;font-family:Cambria;-inkscape-font-specification:'Cambria, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;text-align:center;text-anchor:middle;fill:#b80000;fill-opacity:1;stroke:none;stroke-width:0.797088;stroke-miterlimit:5.3;stroke-opacity:1"
+       x="412.14453"
+       y="352.37274"
+       id="text105"
+       transform="matrix(0.91348635,-0.00493967,0.00591945,1.0946751,0,0)"><tspan
+         id="tspan105"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:22.4955px;font-family:Cambria;-inkscape-font-specification:'Cambria, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#b80000;fill-opacity:1;stroke:none;stroke-width:0.797087"
+         x="412.14453"
+         y="352.37274">1</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:22.4955px;font-family:Cambria;-inkscape-font-specification:'Cambria, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;text-align:center;text-anchor:middle;fill:#b80000;fill-opacity:1;stroke:none;stroke-width:0.797088;stroke-miterlimit:5.3;stroke-opacity:1"
+       x="-495.80975"
+       y="-419.46063"
+       id="text106"
+       transform="matrix(-0.91345382,-0.00915617,0.01097228,-1.0946361,0,0)"><tspan
+         id="tspan106"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:22.4955px;font-family:Cambria;-inkscape-font-specification:'Cambria, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#b80000;fill-opacity:1;stroke:none;stroke-width:0.797087"
+         x="-495.80975"
+         y="-419.46063">1</tspan></text>
+    <path
+       style="fill:#b80000;fill-opacity:1;stroke:#b80000;stroke-width:0.600001;stroke-miterlimit:5.3;stroke-opacity:1"
+       id="path108"
+       d="m 389.04557,399.27613 -30.23955,-4.13904 18.7043,-24.1187 z"
+       transform="matrix(0.47354512,-0.06225714,0.06157868,0.47791789,177.80028,230.89778)" />
+  </g>
+</svg>
