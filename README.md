@@ -77,3 +77,10 @@ The application would be running on `127.0.0.1:8000`.
 This code base is open to contributions. To contribute, check out the [issues](https://github.com/EteimZ/whot/issues) of the repo. Pick an issue you want to resolve and drop a comment to express your interest in resolving the issue. If there's no issue, you can create an issue that you can resolve yourself or let someone else resolve it.
 
 If you want to make contributions, first you have to fork the repo. Make your changes to your fork, then open a PR.
+
+## Resources
+
+Useful resources about the game of whot.
+- Whot [Wikipedia page](https://en.wikipedia.org/wiki/Whot!).
+- Whot game [rules](https://www.pagat.com/com/whot.html) from [pagat.com](https://en.wikipedia.org/wiki/Pagat.com).
+- This [document](https://www.gamecatalog.org/rules/Storey+Co_Whot.pdf) that has the original whot rules from the 1930's.
