@@ -8,7 +8,7 @@ Whot is a popular card game first developed by William Henry Storey in the 1930s
 
 ## How it's played
 
-![Whot game play]("assets/gameplay.png")
+![Whot game play](assets/gameplay.png)
 
 The game of Whot consists of two or more players. Each player is dealt a certain number of cards at the beginning of the game. The player can only see their own card and can't see their opponents' cards.
 
@@ -20,7 +20,7 @@ A winner is declared when one of the players no longer has any card at hand.
 
 ## Cards
 
-![Whot cards]("assets/cards.png")
+![Whot cards](assets/cards.png)
 
 The Whot card consists of 5 suits that come in the form of shapes:
 - Cross
