@@ -1,4 +1,5 @@
 from .deck import Card
+from dataclasses import dataclass, asdict
 
 class Player:
     """
@@ -18,12 +19,22 @@ class Player:
         card = self._cards[n]
         self._cards.remove(card)
         return card
+    
+    def cards(self):
+        card_list = []
+        for card in self._cards:
+            card_list.append(asdict(card))
+        
+        return card_list
 
     def recieve(self, card: list[Card]):
         self._cards.extend(card)
 
     def disp(self):
         print(self._cards)
+    
+    def asdict(self):
+        return { "player_id" : self.player_id, "cards": self.cards() }
 
     def __repr__(self):
         return f"{self.player_id}"

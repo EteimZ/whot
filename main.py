@@ -1,9 +1,15 @@
-from whot import Game, Player, Deck
+from whot import Whot, Player, Deck, Card, Suit
 
 p1 = Player("Eteims")
 p2 = Player("Jacob")
 p3 = Player("Ted")
 
 d = Deck()
-g = Game(d, [p1, p2, p3])
-g.play()
+d.shuffle()
+# print(d.cards)
+
+p1.recieve(d.deal_card(4))
+
+g = Whot(4)
+print(g.game_state())
+g.play(Card(Suit.ANGLE, 1))
