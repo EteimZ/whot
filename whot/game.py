@@ -1,20 +1,13 @@
-"""
-TODO: Handle game processes
-"""
-
-from dataclasses import asdict
-
 from .deck import Deck, Card, Suit
 from .player import Player
+
+from enum import Enum
 
 
 class Whot:
     ## Whot Engine
-    ## The game would start with the number of players initialized
-    ## The current player who is playing
-    ## Randomly pick a card for the top pile
 
-    def __init__(self, number_of_players: int):
+    def __init__(self, number_of_players: int, number_of_cards: int = 4):
         # Create deck and shuffle
         deck = Deck()
         deck.shuffle()
@@ -25,25 +18,82 @@ class Whot:
             self.players.append(Player(f"player_{i + 1}"))
         
         for p in self.players:
-            p.recieve(deck.deal_card(4))
+            p.recieve(deck.deal_card(number_of_cards))
         
         self.pile: list[Card] = deck.deal_card(1)
         self.gen: Deck = deck
         self.current_player: Player = self.players[0]
         self.game_running = True
+        self.request_mode = False
+        self.requested_suit = None
     
     def game_state(self):
         self.current_state = { "current_player": self.current_player.player_id }
-        
+        self.current_state["pile_top"] = self.pile[-1]
+
         for p in self.players:
             self.current_state[p.player_id] = p._cards
         
         return self.current_state
 
-    def play(self, card: Card):
-        # print(self.current_state[self.current_state["current_player"]])
-        print(card in self.current_state[self.current_player.player_id])
+    def play(self, card_index: int):
+
+        selected_card: Card = self.current_state[self.current_player.player_id][card_index]
+        top_card = self.pile[-1]
+
+        if (selected_card.suit == Suit.WHOT):
+            self.pile.append(selected_card)
+            self.current_player._cards.remove(selected_card)
+
+            if (len(self.current_player._cards) == 0):
+                return {"status": "GameOver", "winner":self.current_player.player_id }
+            
+            return {"status": "Request"}
+
+        if self.request_mode:
+            if (selected_card.suit == self.requested_suit):
+                self.pile.append(selected_card)
+                self.current_player._cards.remove(selected_card)
+                if (len(self.current_player._cards) == 0):
+                    return {"status": "GameOver", "winner":self.current_player.player_id }
+                
+                self.next_player()
+                self.request_mode = False
+                return {"status": "Played"}
+            else:
+                return {"status": "Failed"}
+
+        if (selected_card.face == top_card.face or selected_card.suit == top_card.suit ):
+            self.pile.append(selected_card)
+            self.current_player._cards.remove(selected_card)
+            if (len(self.current_player._cards) == 0):
+                return {"status": "GameOver", "winner":self.current_player.player_id }
+                        
+            self.next_player()
+            return {"status": "Played"}
+        else:
+            return {"status": "Failed"}
+            # print("Couldn't play successfully")
+
+        # print(selected_card)
+    
+    def market(self):
+        recieved_card = self.gen.deal_card(1)
+        self.current_player.recieve(recieved_card)
         self.next_player()
+
+    def request(self, card_index):
+
+        self.request_mode = True
+
+        try:
+            self.requested_suit = Suit(card_index)
+            self.next_player()
+            return {"requested_suit": self.requested_suit}
+        except ValueError:
+            # Handle the case where card_index doesn't match any Suit
+            pass
+
     
     def next_player(self, skip=1):
         n = self.players.index(self.current_player)
@@ -58,8 +108,6 @@ class Whot:
             return self.players[n + 1]
         except IndexError:
             return self.players[0]
-
-
 
 # Old Engine
 
