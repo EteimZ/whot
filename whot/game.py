@@ -27,6 +27,29 @@ class Whot:
         self.request_mode = False
         self.requested_suit = None
     
+    
+    def view(self, player_id):
+        """
+        Get a view of the game from a player's perspective
+        """
+        view = {}
+
+        for p in self.players:
+            if (p.player_id == player_id):
+                view[p.player_id] = p._cards
+            else:
+                view[p.player_id] = len(p._cards)
+
+        return view
+    
+    @property
+    def num_of_players(self):
+        """
+        Get the number of players in the game
+        """
+
+        return len(self.players)
+    
     def game_state(self):
         self.current_state = { "current_player": self.current_player.player_id }
         self.current_state["pile_top"] = self.pile[-1]
