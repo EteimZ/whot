@@ -1,8 +1,8 @@
 WHOT
 ====
 
-**Whot** is an Engine that implements the game of `whot! <https://en.wikipedia.org/wiki/Whot!>`_.
-Using this engine you can build your own whot! game servers and connect it to any frontend technology of your choice.
+**Whot** is an Engine that implements the game of `Whot! <https://en.wikipedia.org/wiki/Whot!>`_
+Using this engine, you can build your own Whot! game servers and connect it to any frontend technology of your choice.
 
 .. note::
 
@@ -11,7 +11,7 @@ Using this engine you can build your own whot! game servers and connect it to an
 Installation
 ------------
 
-The Engine is implemented in python so to install it you can use pip:
+The Engine is implemented in python, so to install it, you can use `pip <https://pypi.org/project/pip>`_:
 
 .. code-block:: console
 
@@ -22,28 +22,28 @@ Once installed, you can start using the engine in your Python projects.
 Usage
 -----
 
-The engine provides simple set of APIs that coressponds to the actual whot! game.
+The engine provides simple set of APIs that corresponds to the actual Whot! game.
 
-To start the game import the ``Whot`` class
+To start the game, import the ``Whot`` class
 
 .. code-block:: python
    
    from whot import Whot
 
 
-Once it is imported create an instance of the class and start the game
+Once it is imported, create an instance of the class and start the game:
 
 .. code-block:: python
 
    game = Whot()
 
-To view the state of the game use the ``game_state`` method of the class:
+To view the state of the game, use the ``game_state`` method of the class:
 
 .. code-block:: python
 
    game.game_state()
 
-The ``game_state`` method returns a dictionary that contains the current state of the game.
+The ``game_state`` method returns a dictionary that contains the current state of the game:
 
 .. code-block:: python
 
@@ -54,13 +54,13 @@ The ``game_state`` method returns a dictionary that contains the current state o
     'player_2': [7 CIRCLE, 3 SQUARE, 11 CROSS, 8 STAR]
    }
 
-To view the state of the game use from a player's perspestive use the `view` method:
+To view the state of the game use from a player's perspective, use the `view` method:
 
 .. code-block:: python
 
    game.view('player_2')
 
-The code above views the game state from the perspestive of ``player_2``.
+The code above views the game state from the perspective of ``player_2``:
 
 .. code-block:: python
 
@@ -71,17 +71,16 @@ The code above views the game state from the perspestive of ``player_2``.
     'player_2': [7 CIRCLE, 3 SQUARE, 11 CROSS, 8 STAR]
    }
 
-To play a card use the ``play`` method. The method can be used to select which of the current player's card to select and play with.
+To play a card, use the ``play`` method. This method allows you to select which of the current player's cards to play.
 
 
-Player one who is the current can play any of their card provided it matches the suit or face of the pile card. 
-
+Player one, who is the current player, can play any of their cards provided it matches the suit or face of the pile card.
 
 .. code-block:: python
 
    game.play(0)
 
-If they don't have the card they can use the ``market`` method to grab a new card.
+If they don't have a playable card, they can use the ``market`` method to draw a new card:
 
 .. code-block:: python
 
@@ -99,8 +98,8 @@ If they don't have the card they can use the ``market`` method to grab a new car
       Agents
    Tutorials
       Build a CLI Whot! game
-      Create a Websocket server for whot!
-      Build a full stack whot! game
+      Create a Websocket server for Whot!
+      Build a full stack Whot! game
    API Reference
    Contributing
 
