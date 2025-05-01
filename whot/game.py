@@ -41,6 +41,13 @@ class Engine:
         self.initial_play_state = False
 
         self.event_store.append(serialize_game_state(self.game_state()))
+
+        self.Nigerian_Mode = True
+
+        """
+        British Mode
+        Enable Pick 3
+        """
     
     def view(self, player_id):
         """
@@ -117,57 +124,61 @@ class Engine:
             return {"status": "Request"}
 
         if self.request_mode:
-            # Hold on logic in request mode
-            if (selected_card.suit == self.requested_suit and selected_card.face == 1):
-                self.pile.append(selected_card)
-                self.current_player._cards.remove(selected_card)
+
+            if self.Nigerian_Mode:
+
+                # Hold on logic in request mode
+                if (selected_card.suit == self.requested_suit and selected_card.face == 1):
+                    self.pile.append(selected_card)
+                    self.current_player._cards.remove(selected_card)
+                    
+                    if (len(self.current_player._cards) == 0):
+                        return {"status": "GameOver", "winner":self.current_player.player_id }
+                    
+                    self.request_mode = False
+                    return {"status": "Success"}
+
+                # Go to market logic in request mode
+                if selected_card.suit == self.requested_suit and selected_card.face == 14:
+                    self.pile.append(selected_card)
+                    self.current_player._cards.remove(selected_card)
+
+                    self.handle_go_gen(self.current_player)
+
+                    if (len(self.current_player._cards) == 0):
+                        return {"status": "GameOver", "winner":self.current_player.player_id }
+                    
+                    self.next_player()
+                    self.next_player()
+                    self.request_mode = False
+
+                    return {"status": "Success"}
+
+                # Suspension logic in request mode
+                if selected_card.suit == self.requested_suit and selected_card.face == 8:
+                    self.pile.append(selected_card)
+                    self.current_player._cards.remove(selected_card)
                 
-                if (len(self.current_player._cards) == 0):
-                    return {"status": "GameOver", "winner":self.current_player.player_id }
+                    if (len(self.current_player._cards) == 0):
+                        return {"status": "GameOver", "winner":self.current_player.player_id }
+                    
+                    self.next_player()
+                    self.next_player()
+                    self.request_mode = False
+                    return {"status": "Success"}
                 
-                self.request_mode = False
-                return {"status": "Success"}
+                # pick two logic in request mode
+                if selected_card.suit == self.requested_suit and selected_card.face == 2:
+                    self.pile.append(selected_card)
+                    self.current_player._cards.remove(selected_card)
 
-            # Go to market logic in request mode
-            if selected_card.suit == self.requested_suit and selected_card.face == 14:
-                self.pile.append(selected_card)
-                self.current_player._cards.remove(selected_card)
-
-                self.handle_go_gen(self.current_player)
-
-                if (len(self.current_player._cards) == 0):
-                    return {"status": "GameOver", "winner":self.current_player.player_id }
+                    if (len(self.current_player._cards) == 0):
+                        return {"status": "GameOver", "winner":self.current_player.player_id }
                 
-                self.next_player()
-                self.next_player()
-                self.request_mode = False
-
-                return {"status": "Success"}
-
-            # Suspension logic in request mode
-            if selected_card.suit == self.requested_suit and selected_card.face == 8:
-                self.pile.append(selected_card)
-                self.current_player._cards.remove(selected_card)
-            
-                if (len(self.current_player._cards) == 0):
-                    return {"status": "GameOver", "winner":self.current_player.player_id }
-                
-                self.next_player()
-                self.next_player()
-                self.request_mode = False
-                return {"status": "Success"}
-            
-            # pick two logic in request mode
-            if selected_card.suit == self.requested_suit and selected_card.face == 2:
-                self.pile.append(selected_card)
-                self.current_player._cards.remove(selected_card)
-
-                if (len(self.current_player._cards) == 0):
-                    return {"status": "GameOver", "winner":self.current_player.player_id }
-            
-                self.pick_mode = True
-                self.next_player()
-                return {"status": "Success"}
+                    self.pick_mode = True
+                    self.pick = 2
+                    self.next_player()
+                    return {"status": f"Pick {self.pick}"}
 
             # whot card logic
             if selected_card.suit == self.requested_suit:
@@ -184,68 +195,71 @@ class Engine:
             else:
                 return {"status": "Failed"}
 
-        if self.pick_mode:
-            if (selected_card.face != 2):
-                return {"status": "Failed"}
+        if self.Nigerian_Mode:
+
+            if self.pick_mode:
+                if (selected_card.face != self.pick):
+                    return {"status": "Failed"}
+                
+                if (selected_card.face == self.pick):
+                    self.pile.append(selected_card)
+                    self.current_player._cards.remove(selected_card)
+                    
+                    if (len(self.current_player._cards) == 0):
+                        return {"status": "GameOver", "winner":self.current_player.player_id }
+                    
+                    
+                    self.num_of_picks += self.pick
+                    self.next_player()
+
+                    return {"status": "Success"}
+
+            # Pick two logic
+            if (selected_card.face == 2 and selected_card.suit == top_card.suit) or (selected_card.face == 2 and top_card.face == 2):
+                self.pile.append(selected_card)
+                self.current_player._cards.remove(selected_card)
+
+                if (len(self.current_player._cards) == 0):
+                    return {"status": "GameOver", "winner":self.current_player.player_id }
+                
+                self.pick_mode = True
+                self.pick = 2
+                self.next_player()
+                return {"status": f"Pick {self.pick}"}
+
+
+            # Hold on logic
+            if (selected_card.face == 1 and selected_card.suit == top_card.suit) or (selected_card.face == 1 and top_card.face == 1):
+                self.pile.append(selected_card)
+                self.current_player._cards.remove(selected_card)
+                if (len(self.current_player._cards) == 0):
+                    return {"status": "GameOver", "winner":self.current_player.player_id }
+                return {"status": "Success"}
             
-            if (selected_card.face == 2):
+            # Go to market logic
+            if (selected_card.face == 14 and selected_card.suit == top_card.suit) or (selected_card.face == 14 and top_card.face == 14):
+                self.pile.append(selected_card)
+                self.current_player._cards.remove(selected_card)
+                self.handle_go_gen(self.current_player)
+
+                if (len(self.current_player._cards) == 0):
+                    return {"status": "GameOver", "winner":self.current_player.player_id }
+                
+                self.next_player()
+                self.next_player()
+                return {"status": "Success"}
+            
+            # Suspension logic
+            if (selected_card.face == 8 and selected_card.suit == top_card.suit) or (selected_card.face == 8 and top_card.face == 8):
                 self.pile.append(selected_card)
                 self.current_player._cards.remove(selected_card)
                 
                 if (len(self.current_player._cards) == 0):
                     return {"status": "GameOver", "winner":self.current_player.player_id }
                 
-                
-                self.num_of_picks += 2 
                 self.next_player()
-
-                return {"status": "Success"}
-
-        # Pick two logic
-        if (selected_card.face == 2 and selected_card.suit == top_card.suit) or (selected_card.face == 2 and top_card.face == 2):
-            self.pile.append(selected_card)
-            self.current_player._cards.remove(selected_card)
-
-            if (len(self.current_player._cards) == 0):
-                return {"status": "GameOver", "winner":self.current_player.player_id }
-            
-            self.pick_mode = True
-            self.next_player()
-            return {"status": "Success"}
-
-
-        # Hold on logic
-        if (selected_card.face == 1 and selected_card.suit == top_card.suit) or (selected_card.face == 1 and top_card.face == 1):
-            self.pile.append(selected_card)
-            self.current_player._cards.remove(selected_card)
-            if (len(self.current_player._cards) == 0):
-                return {"status": "GameOver", "winner":self.current_player.player_id }
-            return {"status": "Success"}
-        
-        # Go to market logic
-        if (selected_card.face == 14 and selected_card.suit == top_card.suit) or (selected_card.face == 14 and top_card.face == 14):
-            self.pile.append(selected_card)
-            self.current_player._cards.remove(selected_card)
-            self.handle_go_gen(self.current_player)
-
-            if (len(self.current_player._cards) == 0):
-                return {"status": "GameOver", "winner":self.current_player.player_id }
-            
-            self.next_player()
-            self.next_player()
-            return {"status": "Success"}
-        
-        # Suspension logic
-        if (selected_card.face == 8 and selected_card.suit == top_card.suit) or (selected_card.face == 8 and top_card.face == 8):
-            self.pile.append(selected_card)
-            self.current_player._cards.remove(selected_card)
-            
-            if (len(self.current_player._cards) == 0):
-                return {"status": "GameOver", "winner":self.current_player.player_id }
-            
-            self.next_player()
-            self.next_player()
-            return {"status": "Success"}                 
+                self.next_player()
+                return {"status": "Success"}                 
 
         # normal logic
         if (selected_card.face == top_card.face or selected_card.suit == top_card.suit ):
@@ -362,6 +376,9 @@ class Engine:
             json.dump(data, f, indent=4)  # Pretty-print JSON for readability
 
         return True
+    
+    def british_mode(self):
+        self.Nigerian_Mode = False
 
 
 

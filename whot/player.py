@@ -38,3 +38,8 @@ class Player:
 
     def __repr__(self):
         return f"{self.player_id}"
+
+
+class Agent(Player):
+    pass
+
