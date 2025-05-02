@@ -56,7 +56,7 @@ To use this you need `Python 3.11` or higher. Other lower versions of Python mig
 pip install whot
 ```
 
-Go through the [documentation](https://eteimz.github.io/whot/) to learn more.
+Go through the [documentation](https://whot.readthedocs.io/en/latest/) to learn more.
 
 ## Contributions
 
