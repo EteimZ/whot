@@ -43,10 +43,21 @@ class Engine:
         self.event_store.append(serialize_game_state(self.game_state()))
 
         self.Nigerian_Mode = True
+        self.go_gen_enabled = True
+        self.pick_two_enabled = True
+        self.pick_three_enabled = True
+        self.suspension_enabled = True
+        self.hold_on_enabled = True
 
         """
-        British Mode
-        Enable Pick 3
+        British Mode Done
+        Enable Pick 3 Done
+        Add Support to disable Go Gen Done
+        Add Support to disable Pick Two Done
+        Add Support to disable Pick Three Done
+        Add Support to disable Suspension Done
+        Add Support to disable Hold On Done
+        Fix up the play method
         """
     
     def view(self, player_id):
@@ -126,9 +137,9 @@ class Engine:
         if self.request_mode:
 
             if self.Nigerian_Mode:
-
+        
                 # Hold on logic in request mode
-                if (selected_card.suit == self.requested_suit and selected_card.face == 1):
+                if self.hold_on_enabled and (selected_card.suit == self.requested_suit and selected_card.face == 1):
                     self.pile.append(selected_card)
                     self.current_player._cards.remove(selected_card)
                     
@@ -139,7 +150,7 @@ class Engine:
                     return {"status": "Success"}
 
                 # Go to market logic in request mode
-                if selected_card.suit == self.requested_suit and selected_card.face == 14:
+                if self.go_gen_enabled and (selected_card.suit == self.requested_suit and selected_card.face == 14):
                     self.pile.append(selected_card)
                     self.current_player._cards.remove(selected_card)
 
@@ -155,7 +166,7 @@ class Engine:
                     return {"status": "Success"}
 
                 # Suspension logic in request mode
-                if selected_card.suit == self.requested_suit and selected_card.face == 8:
+                if self.suspension_enabled and (selected_card.suit == self.requested_suit and selected_card.face == 8):
                     self.pile.append(selected_card)
                     self.current_player._cards.remove(selected_card)
                 
@@ -168,7 +179,7 @@ class Engine:
                     return {"status": "Success"}
                 
                 # pick two logic in request mode
-                if selected_card.suit == self.requested_suit and selected_card.face == 2:
+                if self.pick_two_enabled and (selected_card.suit == self.requested_suit and selected_card.face == 2):
                     self.pile.append(selected_card)
                     self.current_player._cards.remove(selected_card)
 
@@ -177,6 +188,19 @@ class Engine:
                 
                     self.pick_mode = True
                     self.pick = 2
+                    self.next_player()
+                    return {"status": f"Pick {self.pick}"}
+
+                # pick three logic in request mode
+                if self.pick_three_enabled and (selected_card.suit == self.requested_suit and selected_card.face == 5):
+                    self.pile.append(selected_card)
+                    self.current_player._cards.remove(selected_card)
+
+                    if (len(self.current_player._cards) == 0):
+                        return {"status": "GameOver", "winner":self.current_player.player_id }
+                
+                    self.pick_mode = True
+                    self.pick = 3
                     self.next_player()
                     return {"status": f"Pick {self.pick}"}
 
@@ -214,8 +238,8 @@ class Engine:
 
                     return {"status": "Success"}
 
-            # Pick two logic
-            if (selected_card.face == 2 and selected_card.suit == top_card.suit) or (selected_card.face == 2 and top_card.face == 2):
+            # Pick two logic       
+            if self.pick_two_enabled and (selected_card.face == 2 and selected_card.suit == top_card.suit) or (selected_card.face == 2 and top_card.face == 2):
                 self.pile.append(selected_card)
                 self.current_player._cards.remove(selected_card)
 
@@ -227,30 +251,45 @@ class Engine:
                 self.next_player()
                 return {"status": f"Pick {self.pick}"}
 
-
-            # Hold on logic
-            if (selected_card.face == 1 and selected_card.suit == top_card.suit) or (selected_card.face == 1 and top_card.face == 1):
+            # Pick three logic
+            if self.pick_three_enabled and (selected_card.face == 5 and selected_card.suit == top_card.suit) or (selected_card.face == 5 and top_card.face == 5):
                 self.pile.append(selected_card)
                 self.current_player._cards.remove(selected_card)
-                if (len(self.current_player._cards) == 0):
-                    return {"status": "GameOver", "winner":self.current_player.player_id }
-                return {"status": "Success"}
-            
-            # Go to market logic
-            if (selected_card.face == 14 and selected_card.suit == top_card.suit) or (selected_card.face == 14 and top_card.face == 14):
-                self.pile.append(selected_card)
-                self.current_player._cards.remove(selected_card)
-                self.handle_go_gen(self.current_player)
 
                 if (len(self.current_player._cards) == 0):
                     return {"status": "GameOver", "winner":self.current_player.player_id }
                 
+                self.pick_mode = True
+                self.pick = 3
                 self.next_player()
-                self.next_player()
+                return {"status": f"Pick {self.pick}"}
+
+            # Hold on logic
+            if self.hold_on_enabled and (selected_card.face == 1 and selected_card.suit == top_card.suit) or (selected_card.face == 1 and top_card.face == 1):
+                self.pile.append(selected_card)
+                self.current_player._cards.remove(selected_card)
+
+                if (len(self.current_player._cards) == 0):
+                    return {"status": "GameOver", "winner":self.current_player.player_id }
+                
                 return {"status": "Success"}
             
+            # Go to market logic
+            if self.go_gen_enabled and (selected_card.face == 14 and selected_card.suit == top_card.suit) or (selected_card.face == 14 and top_card.face == 14):
+                if (selected_card.face == 14 and selected_card.suit == top_card.suit) or (selected_card.face == 14 and top_card.face == 14):
+                    self.pile.append(selected_card)
+                    self.current_player._cards.remove(selected_card)
+                    self.handle_go_gen(self.current_player)
+
+                    if (len(self.current_player._cards) == 0):
+                        return {"status": "GameOver", "winner":self.current_player.player_id }
+                    
+                    self.next_player()
+                    self.next_player()
+                    return {"status": "Success"}
+            
             # Suspension logic
-            if (selected_card.face == 8 and selected_card.suit == top_card.suit) or (selected_card.face == 8 and top_card.face == 8):
+            if self.suspension_enabled and (selected_card.face == 8 and selected_card.suit == top_card.suit) or (selected_card.face == 8 and top_card.face == 8):
                 self.pile.append(selected_card)
                 self.current_player._cards.remove(selected_card)
                 
@@ -379,7 +418,41 @@ class Engine:
     
     def british_mode(self):
         self.Nigerian_Mode = False
+    
+    def toggle_pick_two(self):
+        self.pick_two_enabled = not self.pick_two_enabled
+        if self.pick_two_enabled:
+            return { "status": "Pick Two Enabled" }
+        else:
+            return { "status": "Pick Two Disabled" }
+    
+    def toggle_pick_three(self):
+        self.pick_three_enabled = not self.pick_three_enabled
+        if self.pick_three_enabled:
+            return { "status": "Pick Three Enabled" }
+        else:
+            return { "status": "Pick Three Disabled" }
 
+    def toggle_go_gen(self):
+        self.go_gen_enabled = not self.go_gen_enabled
+        if self.go_gen_enabled:
+            return { "status": "Go Gen Enabled" }
+        else:
+            return { "status": "Go Gen Disabled" }
+    
+    def toggle_suspension(self):
+        self.suspension_enabled = not self.suspension_enabled
+        if self.suspension_enabled:
+            return { "status": "Suspension Enabled" }
+        else:
+            return { "status": "Suspension Disabled" }
+
+    def toggle_hold_on(self):
+        self.hold_on_enabled = not self.hold_on_enabled
+        if self.hold_on_enabled:
+            return { "status": "Hold On Enabled" }
+        else:
+            return { "status": "Hold On Disabled" }
 
 
 class TestEngine(Engine):
