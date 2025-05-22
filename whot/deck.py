@@ -44,6 +44,9 @@ class Card:
         """
         return self.suit == other.suit or self.face == other.face
 
+    def __hash__(self):
+        return hash((self.suit, self.face))
+
     def __str__(self):
         return f"{self.face} {self.suit.name}"
 
@@ -107,6 +110,3 @@ class Deck:
             drawn_cards.append(self.draw_card(card))
         
         return drawn_cards
-
-
-

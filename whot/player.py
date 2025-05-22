@@ -27,7 +27,7 @@ class Player:
         
         return card_list
 
-    def recieve(self, card: list[Card]):
+    def receive(self, card: list[Card]):
         self._cards.extend(card)
 
     def disp(self):
@@ -38,8 +38,4 @@ class Player:
 
     def __repr__(self):
         return f"{self.player_id}"
-
-
-class Agent(Player):
-    pass
 
