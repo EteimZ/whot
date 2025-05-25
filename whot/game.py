@@ -33,16 +33,21 @@ class Engine:
         self.pile: list[Card] = deck.deal_card(1)
         self.gen: Deck = deck
         self.current_player: Player = self.players[0]
+
+        self._set_states()
+
+        self.event_store.append(serialize_game_state(self.game_state()))
+    
+    def _set_states(self):
         self.game_running = True
         self.request_mode = False
         self.requested_suit = None
         self.pick_mode = False
         self.num_of_picks = 2
 
-        self.initial_play_state = False
-
-        self.event_store.append(serialize_game_state(self.game_state()))
-
+        self.game_started = False
+        self.game_over = False
+        
         self._Nigerian_Mode = True
         self._go_gen_enabled = True
         self._pick_two_enabled = True
@@ -94,8 +99,8 @@ class Engine:
     @event_storage
     def start_game(self):
 
-        if self.initial_play_state == False:
-            self.initial_play_state = True
+        if self.game_started == False and self.game_over == False:
+            self.game_started = True
 
             if self.pick_two_enabled:
                 if self.pile[0].face == 2:
@@ -121,8 +126,11 @@ class Engine:
     @event_storage
     def play(self, card_index: int) -> EngineResponse:
         try:
-            if self.initial_play_state == False:
+            if self.game_started == False:
                 return {"status": "Error", "message": "Game has not started. Call start_game() to begin."}
+            
+            if self.game_over == True:
+                return {"status": "Error", "message": "Game Over."}
             
             self.selected_card: Card = self.current_state['players'][self.current_player.player_id][card_index]
             top_card = self.pile[-1]
@@ -133,8 +141,7 @@ class Engine:
                 self.current_player._cards.remove(self.selected_card)
 
                 if (len(self.current_player._cards) == 0):
-                    self.initial_play_state = True
-                    return {"status": "GameOver", "message": f"{self.current_player.player_id} has won the game."}
+                    return self._game_over_logic()
                 
                 self.request_mode = True
                 
@@ -175,8 +182,7 @@ class Engine:
                     self.current_player._cards.remove(self.selected_card)
 
                     if (len(self.current_player._cards) == 0):
-                        self.initial_play_state = True
-                        return {"status": "GameOver", "message": f"{self.current_player.player_id} has won the game."}
+                        return self._game_over_logic()
                     
                     self._next_player()
                     self.request_mode = False
@@ -196,8 +202,7 @@ class Engine:
                         self.current_player._cards.remove(self.selected_card)
                         
                         if (len(self.current_player._cards) == 0):
-                            self.initial_play_state = True
-                            return {"status": "GameOver", "message": f"{self.current_player.player_id} has won the game."}                        
+                            return self._game_over_logic()                       
                         
                         self.num_of_picks += self.pick
                         self._next_player()
@@ -230,8 +235,7 @@ class Engine:
                 self.current_player._cards.remove(self.selected_card)
 
                 if (len(self.current_player._cards) == 0):
-                    self.initial_play_state = True
-                    return {"status": "GameOver", "message": f"{self.current_player.player_id} has won the game."}                        
+                    return self._game_over_logic()                        
      
                 self._next_player()
                 return {"status": "Success", "message": f"{self.current_player.player_id} played {self.selected_card}."}
@@ -245,9 +249,12 @@ class Engine:
 
     @event_storage
     def market(self):
-        if self.initial_play_state == False:
+        if self.game_started == False:
             return {"status": "Error", "message": "Game has not started. Call start_game() to begin."}
         
+        if self.game_over == True:
+            return {"status": "Error", "message": "Game has ended."}
+
         if self.gen.cards == []:
             new_cards = self.pile[:-1]
             self.pile = self.pile[-1:]
@@ -266,8 +273,11 @@ class Engine:
             self._next_player()
 
     def request(self, suit):
-        if self.initial_play_state == False:
+        if self.game_started == False:
             return {"status": "Error", "message": "Game has not started. Call start_game() to begin."}
+
+        if self.game_over == True:
+            return {"status": "Error", "message": "Game has ended."}
 
         if suit == "whot":
             pass
@@ -339,7 +349,7 @@ class Engine:
         self.current_player._cards.remove(self.selected_card)
 
         if (len(self.current_player._cards) == 0):
-            return {"status": "GameOver", "winner":self.current_player.player_id }
+            return self._game_over_logic()
                 
         self.pick_mode = True
         self.pick = 2
@@ -351,7 +361,7 @@ class Engine:
         self.current_player._cards.remove(self.selected_card)
 
         if (len(self.current_player._cards) == 0):
-            return {"status": "GameOver", "winner":self.current_player.player_id }
+            return self._game_over_logic()
                 
         self.pick_mode = True
         self.pick = 3
@@ -363,7 +373,7 @@ class Engine:
         self.current_player._cards.remove(self.selected_card)
 
         if (len(self.current_player._cards) == 0):
-            return {"status": "GameOver", "winner":self.current_player.player_id }
+            return self._game_over_logic()
         
         return {"status": "Success"}     
 
@@ -373,7 +383,7 @@ class Engine:
         self._handle_go_gen(self.current_player)
 
         if (len(self.current_player._cards) == 0):
-            return {"status": "GameOver", "winner":self.current_player.player_id }
+            return self._game_over_logic()
         
         self._next_player()
         self._next_player()
@@ -384,11 +394,32 @@ class Engine:
         self.current_player._cards.remove(self.selected_card)
                 
         if (len(self.current_player._cards) == 0):
-            return {"status": "GameOver", "winner":self.current_player.player_id }
+            return self._game_over_logic()
                 
         self._next_player()
         self._next_player()
         return {"status": "Success"}
+    
+    def _game_over_logic(self):
+        self.game_over = True
+        return {"status": "GameOver", "message": f"{self.current_player.player_id} has won the game."}
+    
+    def score(self):
+        players = self.game_state()["players"]
+
+        score = {}
+
+        for player in players:
+            score[player] = 0
+            for card in players[player]:
+                if card.suit == Suit.STAR:
+                    score[player] += 2 * card.face
+                else:
+                    score[player] += card.face
+        
+        score = {k: v for k, v in sorted(score.items(), key=lambda item: item[1])}
+        
+        return score
 
     @property
     def Nigerian_Mode(self):
@@ -490,6 +521,6 @@ class TestEngine(Engine):
         self.request_mode = False
         self.requested_suit = None
 
-        self.initial_play_state = False
+        self.game_started = False
         
         self.event_store.append(serialize_game_state(self.game_state()))
