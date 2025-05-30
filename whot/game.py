@@ -1,10 +1,19 @@
-from .deck import Deck, Card, Suit
-from .player import Player
-from .utils import serialize_game_state
-from .types import EngineResponse
 import json
 import uuid
 import os
+
+from .deck import Deck, Card, Suit
+from .player import Player
+from .utils import serialize_game_state
+from .types import EngineResponse, RequestResponse
+from .types import GameState, GameView
+from .exceptions import (
+    GameNotStartedError,
+    GameOverError,
+    InvalidMoveError,
+    InvalidCardError,
+    InvalidSuitError,
+)
 
 
 class Engine:
@@ -56,15 +65,15 @@ class Engine:
         self._hold_on_enabled = True
 
     
-    def view(self, player_id):
+    def view(self, player_id) -> GameView:
         """
         Get a view of the game from a player's perspective
         """
-        view = {}
-
-        view["current_player"] = self.current_player.player_id
-        view["pile_top"] = self.pile[-1]
-        view["players"] = {}
+        view: GameView = {
+            "current_player": self.current_player.player_id,
+            "pile_top": self.pile[-1],
+            "players": {}
+        }
 
         for p in self.players:
             if (p.player_id == player_id):
@@ -74,15 +83,21 @@ class Engine:
 
         return view
     
-    def game_state(self):
-        self.current_state = { "current_player": self.current_player.player_id }
-        self.current_state["pile_top"] = self.pile[-1]
-        self.current_state["players"] = {}
+    def game_state(self) -> GameState:
+        """
+        Get the current state of the game
+        """
+
+        state: GameState = {
+            "current_player": self.current_player.player_id,
+            "pile_top": self.pile[-1],
+            "players": {}
+        }
 
         for p in self.players:
-            self.current_state["players"][p.player_id] = p._cards
+            state["players"][p.player_id] = p._cards
         
-        return self.current_state
+        return state
 
     @staticmethod
     def event_storage(func):
@@ -127,12 +142,11 @@ class Engine:
     def play(self, card_index: int) -> EngineResponse:
         try:
             if self.game_started == False:
-                return {"status": "Error", "message": "Game has not started. Call start_game() to begin."}
-            
+                raise GameNotStartedError("Game has not started. Call start_game() to begin.")
             if self.game_over == True:
-                return {"status": "Error", "message": "Game Over."}
-            
-            self.selected_card: Card = self.current_state['players'][self.current_player.player_id][card_index]
+                raise GameOverError("Game Over. No more moves can be made.")
+
+            self.selected_card: Card = self.game_state()['players'][self.current_player.player_id][card_index]
             top_card = self.pile[-1]
 
             # request card logic
@@ -145,7 +159,7 @@ class Engine:
                 
                 self.request_mode = True
                 
-                return {"status": "Request", "message": f"{self.current_player.player_id} wants to make a request."}
+                return {"status": True, "type": "request", "card": self.selected_card.serialize(), "player_id": self.current_player.player_id }
 
             if self.request_mode:
 
@@ -184,18 +198,20 @@ class Engine:
                     if (len(self.current_player._cards) == 0):
                         return self._game_over_logic()
                     
+                    player = self.current_player.player_id
                     self._next_player()
                     self.request_mode = False
-                    return {"status": "Success", "message": f"{self.current_player.player_id} played {self.selected_card}."}          
+
+                    return {"status": True, "type": "normal", "card": self.selected_card.serialize(), "player_id": player}          
 
                 else:
-                    return {"status": "Failed", "message": "The card doesn't match the requested suit."}
+                    raise InvalidCardError("You can only play a card of the requested suit in request mode.")
 
             if self.Nigerian_Mode:
 
                 if self.pick_mode:
                     if (self.selected_card.face != self.pick):
-                        return {"status": "Failed", "message": "The card doesn't match the number."}
+                        raise InvalidCardError(f"Card must be a {self.pick} or you should go to market.")
                     
                     if (self.selected_card.face == self.pick):
                         self.pile.append(self.selected_card)
@@ -204,10 +220,11 @@ class Engine:
                         if (len(self.current_player._cards) == 0):
                             return self._game_over_logic()                       
                         
-                        self.num_of_picks += self.pick
+                        player = self.current_player.player_id
                         self._next_player()
+                        self.num_of_picks += self.pick
 
-                        return {"status": "Success", "message": f"{self.current_player.player_id} played {self.selected_card}."}
+                        return {"status": True, "type": "normal", "card": self.selected_card.serialize(), "player_id": player }
 
                 # Pick two logic       
                 if self.pick_two_enabled and ((self.selected_card.face == 2 and self.selected_card.suit == top_card.suit) or (self.selected_card.face == 2 and top_card.face == 2)):
@@ -236,24 +253,25 @@ class Engine:
 
                 if (len(self.current_player._cards) == 0):
                     return self._game_over_logic()                        
-     
-                self._next_player()
-                return {"status": "Success", "message": f"{self.current_player.player_id} played {self.selected_card}."}
-            
-            else:
-                return {"status": "Failed", "message": "The card doesn't match the top card suit or face."}
-        
-        except IndexError:
-            return {"status": "Failed", "message": f"Invalid card index: {card_index}. Must be between 0 and {len(self.current_player._cards) - 1}."}
 
+                player = self.current_player.player_id
+                self._next_player()
+
+                return {"status": True, "type": "normal", "card": self.selected_card.serialize(), "player_id": player }
+
+            else:
+                raise InvalidCardError("The card doesn't match the top card suit or face.")
+    
+        except IndexError:
+            raise InvalidMoveError(f"Invalid card index: {card_index}. Must be between 0 and {len(self.current_player._cards) - 1}")
 
     @event_storage
     def market(self):
         if self.game_started == False:
-            return {"status": "Error", "message": "Game has not started. Call start_game() to begin."}
-        
+            raise GameNotStartedError("Game has not started. Call start_game() to begin.")
+    
         if self.game_over == True:
-            return {"status": "Error", "message": "Game has ended."}
+            raise GameOverError("Game Over. No more moves can be made.")
 
         if self.gen.cards == []:
             new_cards = self.pile[:-1]
@@ -272,22 +290,27 @@ class Engine:
             self.current_player.receive(received_card)
             self._next_player()
 
-    def request(self, suit):
+    def request(self, suit) -> RequestResponse:
         if self.game_started == False:
-            return {"status": "Error", "message": "Game has not started. Call start_game() to begin."}
-
+            raise GameNotStartedError("Game has not started. Call start_game() to begin.")
+            
         if self.game_over == True:
-            return {"status": "Error", "message": "Game has ended."}
+            raise GameOverError("Game Over. No more moves can be made.")
+
+        if self.request_mode == False:
+            raise InvalidMoveError("Cannot request a card if not in request mode.")
 
         if suit == "whot":
-            pass
+            raise InvalidSuitError(f"Invalid suit: You can't request for a whot card.")
         else:
             try:
                 self.requested_suit = Suit(suit)
+                player = self.current_player.player_id
                 self._next_player()
-                return {"requested_suit": self.requested_suit}
+                return {"requested_suit": self.requested_suit.value, "player_id": player}
+            
             except ValueError:
-                return {"status": "Error", "message": f"Invalid suit: {suit}. Must be one of {list(Suit)}."}
+                raise InvalidSuitError(f"Invalid suit: {suit}. Must be one of {list(Suit)}.")
     
     def save(self, path):
         """
@@ -344,7 +367,7 @@ class Engine:
                 received_card = self.gen.deal_card(1)
                 player.receive(received_card)
     
-    def _pick_two_logic(self):
+    def _pick_two_logic(self) -> EngineResponse:
         self.pile.append(self.selected_card)
         self.current_player._cards.remove(self.selected_card)
 
@@ -353,10 +376,12 @@ class Engine:
                 
         self.pick_mode = True
         self.pick = 2
+        player = self.current_player.player_id
         self._next_player()
-        return {"status": f"Pick {self.pick}"}
 
-    def _pick_three_logic(self):
+        return {"status": True, "type": "pick_2", "card": self.selected_card.serialize(), "player_id": player}
+
+    def _pick_three_logic(self) -> EngineResponse:
         self.pile.append(self.selected_card)
         self.current_player._cards.remove(self.selected_card)
 
@@ -365,19 +390,21 @@ class Engine:
                 
         self.pick_mode = True
         self.pick = 3
+        player = self.current_player.player_id
         self._next_player()
-        return {"status": f"Pick {self.pick}"}
-    
-    def _hold_on_logic(self):
+
+        return {"status": True, "type": "pick_3", "card": self.selected_card.serialize(), "player_id": player}
+
+    def _hold_on_logic(self) -> EngineResponse:
         self.pile.append(self.selected_card)
         self.current_player._cards.remove(self.selected_card)
 
         if (len(self.current_player._cards) == 0):
             return self._game_over_logic()
         
-        return {"status": "Success"}     
+        return {"status": True, "type": "hold_on", "card": self.selected_card.serialize(), "player_id": self.current_player.player_id }
 
-    def _go_gen_logic(self):
+    def _go_gen_logic(self) -> EngineResponse:
         self.pile.append(self.selected_card)
         self.current_player._cards.remove(self.selected_card)
         self._handle_go_gen(self.current_player)
@@ -385,24 +412,30 @@ class Engine:
         if (len(self.current_player._cards) == 0):
             return self._game_over_logic()
         
-        self._next_player()
-        self._next_player()
-        return {"status": "Success"}   
+        player = self.current_player.player_id
 
-    def _suspension_logic(self):
+        self._next_player()
+        self._next_player()
+
+        return {"status": True, "type": "general_market", "card": self.selected_card.serialize(), "player_id": player}
+
+    def _suspension_logic(self) -> EngineResponse:
         self.pile.append(self.selected_card)
         self.current_player._cards.remove(self.selected_card)
                 
         if (len(self.current_player._cards) == 0):
             return self._game_over_logic()
-                
+        
+        player = self.current_player.player_id
+
         self._next_player()
         self._next_player()
-        return {"status": "Success"}
+
+        return {"status": True, "type": "suspension", "card": self.selected_card.serialize(), "player_id": player}
     
-    def _game_over_logic(self):
+    def _game_over_logic(self) -> EngineResponse:
         self.game_over = True
-        return {"status": "GameOver", "message": f"{self.current_player.player_id} has won the game."}
+        return {"status": False, "type": "normal", "card": self.selected_card.serialize(), "player_id": self.current_player.player_id}
     
     def score(self):
         players = self.game_state()["players"]
@@ -428,7 +461,7 @@ class Engine:
     @Nigerian_Mode.setter
     def Nigerian_Mode(self, value):
         if not isinstance(value, bool):
-            raise ValueError("Nigerian_Mode must be a boolean value.")
+            raise InvalidMoveError("Nigerian_Mode must be a boolean value.")
 
         self._Nigerian_Mode = value
 
@@ -439,7 +472,7 @@ class Engine:
     @go_gen_enabled.setter
     def go_gen_enabled(self, value):
         if not isinstance(value, bool):
-            raise ValueError("go_gen_enabled must be a boolean value.")
+            raise InvalidMoveError("go_gen_enabled must be a boolean value.")
         
         self._go_gen_enabled = value
     
@@ -450,7 +483,7 @@ class Engine:
     @pick_two_enabled.setter
     def pick_two_enabled(self, value):
         if not isinstance(value, bool):
-            raise ValueError("pick_two_enabled must be a boolean value.")
+            raise InvalidMoveError("pick_two_enabled must be a boolean value.")
         
         self._pick_two_enabled = value
 
@@ -461,7 +494,7 @@ class Engine:
     @pick_three_enabled.setter
     def pick_three_enabled(self, value):
         if not isinstance(value, bool):
-            raise ValueError("pick_three_enabled must be a boolean value.")
+            raise InvalidMoveError("pick_three_enabled must be a boolean value.")
         
         self._pick_three_enabled = value
     
@@ -472,7 +505,7 @@ class Engine:
     @suspension_enabled.setter
     def suspension_enabled(self, value):
         if not isinstance(value, bool):
-            raise ValueError("suspension_enabled must be a boolean value.")
+            raise InvalidMoveError("suspension_enabled must be a boolean value.")
         
         self._suspension_enabled = value
     
@@ -483,7 +516,7 @@ class Engine:
     @hold_on_enabled.setter
     def hold_on_enabled(self, value):
         if not isinstance(value, bool):
-            raise ValueError("hold_on_enabled must be a boolean value.")
+            raise InvalidMoveError("hold_on_enabled must be a boolean value.")
         
         self._hold_on_enabled = value
 
@@ -501,6 +534,7 @@ class TestEngine(Engine):
 
         self.event_store = []
 
+        # Create deck and shuffle
         deck = Deck()
         deck.shuffle()
 
@@ -508,7 +542,7 @@ class TestEngine(Engine):
         self.pile: list[Card] = []
         self.pile.append(deck.draw_card(test_pile_card))
 
-        # Create test player 
+        # Create test players 
         self.players: list[Player] = []
 
         for player_id, cards in enumerate(test_players, start=1):
@@ -517,10 +551,7 @@ class TestEngine(Engine):
         
         self.gen: Deck = deck
         self.current_player: Player = self.players[0]
-        self.game_running = True
-        self.request_mode = False
-        self.requested_suit = None
 
-        self.game_started = False
+        self._set_states()
         
         self.event_store.append(serialize_game_state(self.game_state()))
