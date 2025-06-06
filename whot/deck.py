@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import TypedDict
 
 from dataclasses import dataclass
 import random
@@ -31,6 +32,10 @@ class Suit(Enum):
     def __repr__(self):
         return self.name
 
+# Redefined here due to circular imports
+class CardDict(TypedDict):
+    suit: str
+    face: int
 
 @dataclass
 class Card:
@@ -43,6 +48,9 @@ class Card:
         Check if two cards are of the same suit or face
         """
         return self.suit == other.suit or self.face == other.face
+
+    def serialize(self) -> CardDict:
+        return {"suit": self.suit.value, "face": self.face}
 
     def __hash__(self):
         return hash((self.suit, self.face))

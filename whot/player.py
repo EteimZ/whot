@@ -1,5 +1,7 @@
-from .deck import Card
 from dataclasses import dataclass, asdict
+
+from .deck import Card
+
 
 class Player:
     """
@@ -13,7 +15,7 @@ class Player:
 
     def __init__(self, player_id):
         self._cards: list[Card] = []
-        self.player_id: int = player_id
+        self.player_id: str = player_id
 
     def transfer(self, n):
         card = self._cards[n]
