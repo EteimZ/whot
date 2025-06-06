@@ -2,10 +2,6 @@ from typing import TypedDict, Literal
 
 from .deck import Card
 
-class EngineResponse2(TypedDict):
-    status: str
-    message: str
-
 class CardDict(TypedDict):
     suit: str
     face: int

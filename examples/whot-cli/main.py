@@ -15,13 +15,10 @@ while True:
     
     if option == 1:
         n = int(input("Provide card index: "))
-        try:
-            result = g.play(n)
-            if result["status"] == "GameOver":
-                print(f"Player: {result['winner']} wins!")
-                break
 
-            if result["status"] == "Request":
+        result = g.play(n)
+        if result["status"] == True:
+            if result["type"] == "request":
                 print("0. Circle")
                 print("1. Square")
                 print("2. Star")
@@ -31,11 +28,10 @@ while True:
                 print(cards[suit])
                 request_card = g.request(cards[suit])
                 print(f"I need: {request_card}")
-        except ValueError:
-            print("What the fuck is going on!")
-            print(g.game_state())
-            print(g.players)
-            print([player.cards() for player in g.players ])
+            
+        else:
+            print(f"Player: {result['player_id']} wins!")
+            break
 
     elif option == 2:
         g.market()
