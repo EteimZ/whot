@@ -1,6 +1,7 @@
 import unittest
 from whot import *
-from whot.exceptions import InvalidCardError
+from whot.exceptions import InvalidCardError, GameNotStartedError, GameOverError, InvalidSuitError, InvalidMoveError
+
 
 class TestRequestLogic(unittest.TestCase):
 
@@ -46,6 +47,80 @@ class TestRequestLogic(unittest.TestCase):
         self.assertTrue(w.request_mode)
 
         self.assertEqual(w.game_state()["current_player"], "player_1")
+
+    def test_request_initial_card(self):
+        """
+        Test the engine's functionality when the initial card is a whot card
+        """
+
+        # Define top pile card
+        pile = Card(Suit.WHOT, 20)
+
+        # Define player cards
+        card1 = Card(Suit.CIRCLE, 2)
+        card2 = Card(Suit.WHOT, 20)
+        card3 = Card(Suit.CROSS, 2)
+        card4 = Card(Suit.SQUARE, 14)
+        card5 = Card(Suit.CIRCLE, 1)
+
+        card6 = Card(Suit.CIRCLE, 4)
+        card7 = Card(Suit.TRIANGLE, 13)
+        card8 = Card(Suit.STAR, 4)
+        card9 = Card(Suit.SQUARE, 3)
+        card10 = Card(Suit.CROSS, 11)
+
+        card11 = Card(Suit.TRIANGLE, 5)
+        card12 = Card(Suit.STAR, 3)
+        card13 = Card(Suit.CROSS, 13)
+        card14 = Card(Suit.CIRCLE, 10)
+        card15 = Card(Suit.SQUARE, 7)
+
+
+        # Create players
+        test_players = [[card1, card2, card3, card4, card5], [card6, card7, card8, card9, card10], [card11, card12, card13, card14, card15]]
+
+        # Initialize test engine
+        w = TestWhot(pile, test_players)
+
+        # Start game
+        w.start_game()
+
+        # Check if the engine is in request mode
+        self.assertTrue(w.request_mode)
+
+        # player 1 makes a request
+        request_result = w.request("circle")
+
+        # Confirm request result
+        self.assertEqual(request_result["requested_suit"], "circle")
+        self.assertEqual(request_result["player_id"], "player_1")
+
+        # Confirm that is the next players turn
+        self.assertEqual(w.game_state()["current_player"], "player_2")
+        
+        # Check if an error is raised if the player plays a suit that isn't circle
+        with self.assertRaises(InvalidCardError):
+            w.play(1)
+
+        with self.assertRaises(InvalidCardError):
+            w.play(2)
+        
+        with self.assertRaises(InvalidCardError):
+            w.play(3)
+        
+        with self.assertRaises(InvalidCardError):
+            w.play(4)
+
+        result = w.play(0)
+
+        # Check if the engine is in request mode
+        self.assertFalse(w.request_mode)
+
+        self.assertTrue(result["status"])
+        self.assertEqual(result["type"], "normal")
+        self.assertEqual(result["player_id"], "player_2")
+
+        self.assertEqual(w.game_state()["current_player"], "player_3")    
 
     def test_request_circle(self):
         """
@@ -647,6 +722,186 @@ class TestRequestLogic(unittest.TestCase):
         # Check if the engine is in request mode
         self.assertTrue(w.request_mode)
 
+    def test_request_invalid_suit(self):
+        """
+        Test to see if a player can request for the circle suit.
+        """
+
+        # Define top pile card
+        pile = Card(Suit.CIRCLE, 3)
+
+        # Define player cards
+        card1 = Card(Suit.CIRCLE, 2)
+        card2 = Card(Suit.WHOT, 20)
+        card3 = Card(Suit.CROSS, 2)
+        card4 = Card(Suit.SQUARE, 14)
+        card5 = Card(Suit.CIRCLE, 1)
+
+        card6 = Card(Suit.CIRCLE, 4)
+        card7 = Card(Suit.TRIANGLE, 13)
+        card8 = Card(Suit.STAR, 4)
+        card9 = Card(Suit.SQUARE, 3)
+        card10 = Card(Suit.CROSS, 11)
+
+        card11 = Card(Suit.TRIANGLE, 5)
+        card12 = Card(Suit.STAR, 3)
+        card13 = Card(Suit.CROSS, 13)
+        card14 = Card(Suit.CIRCLE, 10)
+        card15 = Card(Suit.SQUARE, 7)
+
+
+        # Create players
+        test_players = [[card1, card2, card3, card4, card5], [card6, card7, card8, card9, card10], [card11, card12, card13, card14, card15]]
+
+        # Initialize test engine
+        w = TestWhot(pile, test_players)
+
+        # Start game
+        w.start_game()
+
+        # Player one plays the pick two card
+        result = w.play(1)
+
+        # Assert results
+        self.assertTrue(result["status"])
+        self.assertEqual(result["type"], "request")
+        self.assertEqual(result["player_id"], "player_1")
+
+
+        # Check if the engine is in request mode
+        self.assertTrue(w.request_mode)
+
+        # Check the current player is still player one despite playing the whot card
+        self.assertEqual(w.game_state()["current_player"], "player_1")
+        
+        # Check if engine raises an error if the player requests for a whot card
+        with self.assertRaises(InvalidSuitError):
+            w.request("whot")
+
+        # Check if engine raises an error if the player requests for a suit that doesn't exist
+        with self.assertRaises(InvalidSuitError):
+            w.request("what")
+
+        self.assertEqual(w.game_state()["current_player"], "player_1")
+
+
+    def test_request_game_not_started(self):
+        """
+        Test that request's can't be made if the game hasn't started
+        """
+
+        # Define top pile card
+        pile = Card(Suit.WHOT, 20)
+
+        # Define player cards
+        card1 = Card(Suit.CIRCLE, 2)
+        card2 = Card(Suit.WHOT, 20)
+        card3 = Card(Suit.CROSS, 2)
+        card4 = Card(Suit.SQUARE, 14)
+        card5 = Card(Suit.CIRCLE, 1)
+
+        card6 = Card(Suit.CIRCLE, 4)
+        card7 = Card(Suit.TRIANGLE, 13)
+        card8 = Card(Suit.STAR, 4)
+        card9 = Card(Suit.SQUARE, 3)
+        card10 = Card(Suit.CROSS, 11)
+
+        card11 = Card(Suit.TRIANGLE, 5)
+        card12 = Card(Suit.STAR, 3)
+        card13 = Card(Suit.CROSS, 13)
+        card14 = Card(Suit.CIRCLE, 10)
+        card15 = Card(Suit.SQUARE, 7)
+
+
+        # Create players
+        test_players = [[card1, card2, card3, card4, card5], [card6, card7, card8, card9, card10], [card11, card12, card13, card14, card15]]
+
+        # Initialize test engine
+        w = TestWhot(pile, test_players)
+
+        # player makes a request when the game hasn't started
+        with self.assertRaises(GameNotStartedError):
+            w.request("circle")
+
+    def test_request_game_over(self):
+        """
+        Test the engine's functionality when the initial card is a whot card
+        """
+
+        # Define top pile card
+        pile = Card(Suit.STAR, 7)
+
+        # Define player cards
+        card1 = Card(Suit.WHOT, 20)
+
+        card2 = Card(Suit.CIRCLE, 4)
+
+        card3 = Card(Suit.TRIANGLE, 5)
+
+        # Create players
+        test_players = [[card1], [card2], [card3]]
+
+        # Initialize test engine
+        w = TestWhot(pile, test_players)
+
+        # Start game
+        w.start_game()
+
+        # Player one plays the pick two card
+        result = w.play(0)
+
+        # Assert results
+        self.assertFalse(result["status"])
+        self.assertEqual(result["type"], "normal")
+        self.assertEqual(result["player_id"], "player_1")        
+        
+        # Check if a game over error is raised 
+        with self.assertRaises(GameOverError):
+            w.request("circle")
+
+    def test_request_mode(self):
+        """
+        Test to see if a player can request for the triangle suit.
+        """
+
+        # Define top pile card
+        pile = Card(Suit.STAR, 7)
+
+        # Define player cards
+        card1 = Card(Suit.TRIANGLE, 2)
+        card2 = Card(Suit.WHOT, 20)
+        card3 = Card(Suit.CROSS, 2)
+        card4 = Card(Suit.SQUARE, 14)
+        card5 = Card(Suit.CIRCLE, 1)
+
+        card6 = Card(Suit.TRIANGLE, 13)
+        card7 = Card(Suit.CIRCLE, 4)
+        card8 = Card(Suit.STAR, 4)
+        card9 = Card(Suit.SQUARE, 3)
+        card10 = Card(Suit.CROSS, 11)
+
+        card11 = Card(Suit.TRIANGLE, 5)
+        card12 = Card(Suit.STAR, 3)
+        card13 = Card(Suit.CROSS, 13)
+        card14 = Card(Suit.CIRCLE, 10)
+        card15 = Card(Suit.SQUARE, 7)
+
+
+        # Create players
+        test_players = [[card1, card2, card3, card4, card5], [card6, card7, card8, card9, card10], [card11, card12, card13, card14, card15]]
+
+        # Initialize test engine
+        w = TestWhot(pile, test_players)
+
+        # Start game
+        w.start_game()
+
+        # request for a card before playing the whot card
+        with self.assertRaises(InvalidMoveError):
+            w.request("triangle")
+
+        self.assertEqual(w.game_state()["current_player"], "player_1")
+
 
 class TestRequestLogicSpecialCards(unittest.TestCase):
     
@@ -1034,9 +1289,9 @@ class TestRequestLogicSpecialCards(unittest.TestCase):
         self.assertEqual(len(w.game_state()["players"]["player_2"]), 4)
         self.assertEqual(len(w.game_state()["players"]["player_3"]), 6)
 
-    def test_request_whot(self):
+    def test_request_whot_double(self):
         """
-        Test suspension logic in request mode
+        Test if the second player can change the requested suit using their own whot card
         """
 
         # Define top pile card
