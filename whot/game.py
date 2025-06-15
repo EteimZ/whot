@@ -52,7 +52,7 @@ class Engine:
         self.request_mode = False
         self.requested_suit = None
         self.pick_mode = False
-        self.num_of_picks = 2
+        self.num_of_picks = 0
 
         self.game_started = False
         self.game_over = False
@@ -63,7 +63,6 @@ class Engine:
         self._pick_three_enabled = False
         self._suspension_enabled = True
         self._hold_on_enabled = True
-
     
     def view(self, player_id) -> GameView:
         """
@@ -117,24 +116,27 @@ class Engine:
         if self.game_started == False and self.game_over == False:
             self.game_started = True
 
-            if self.pick_two_enabled:
-                if self.pile[0].face == 2:
-                    self.pick = 2
-                    self.pick_mode = True
-            
-            if self.pick_three_enabled:
-                if self.pile[0].face == 5:
-                    self.pick = 3
-                    self.pick_mode = True
+            if self._Nigerian_Mode:
+                if self.pick_two_enabled:
+                    if self.pile[0].face == 2:
+                        self.pick = 2
+                        self.num_of_picks = self.pick
+                        self.pick_mode = True
+                
+                if self.pick_three_enabled:
+                    if self.pile[0].face == 5:
+                        self.pick = 3
+                        self.num_of_picks = self.pick
+                        self.pick_mode = True
 
-            if self.suspension_enabled:
-                if self.pile[0].face == 8:
-                    self._next_player()
-            
-            if self.go_gen_enabled:
-                if self.pile[0].face == 14:
-                    self._handle_go_gen()
-            
+                if self.suspension_enabled:
+                    if self.pile[0].face == 8:
+                        self._next_player()
+                
+                if self.go_gen_enabled:
+                    if self.pile[0].face == 14:
+                        self._handle_go_gen()
+                
             if self.pile[0].face == 20:
                 self.request_mode = True
 
@@ -163,8 +165,7 @@ class Engine:
 
             if self.request_mode:
 
-                if self.Nigerian_Mode:
-            
+                if self._Nigerian_Mode:
                     # Hold on logic in request mode
                     if self.hold_on_enabled and ((self.selected_card.suit == self.requested_suit and self.selected_card.face == 1)):
                         self.request_mode = False
@@ -207,25 +208,21 @@ class Engine:
                 else:
                     raise InvalidCardError("You can only play a card of the requested suit in request mode.")
 
-            if self.Nigerian_Mode:
+            if self._Nigerian_Mode:
 
                 if self.pick_mode:
-                    if (self.selected_card.face != self.pick):
-                        raise InvalidCardError(f"Card must be a {self.pick} or you should go to market.")
+                    if (self.pick == 2):
+                        if (self.selected_card.face != 2):
+                            raise InvalidCardError(f"Card must be a 2 or you should go to market.")
+                        else:
+                            return self._handle_defense(2)
                     
-                    if (self.selected_card.face == self.pick):
-                        self.pile.append(self.selected_card)
-                        self.current_player._cards.remove(self.selected_card)
+                    if (self.pick == 3):
+                        if (self.selected_card.face != 5):
+                            raise InvalidCardError(f"Card must be a 5 or you should go to market.")
+                        else:
+                            return self._handle_defense(3)
                         
-                        if (len(self.current_player._cards) == 0):
-                            return self._game_over_logic()                       
-                        
-                        player = self.current_player.player_id
-                        self._next_player()
-                        self.num_of_picks += self.pick
-
-                        return {"status": True, "type": "normal", "card": self.selected_card.serialize(), "player_id": player }
-
                 # Pick two logic       
                 if self.pick_two_enabled and ((self.selected_card.face == 2 and self.selected_card.suit == top_card.suit) or (self.selected_card.face == 2 and top_card.face == 2)):
                     return self._pick_two_logic()
@@ -282,7 +279,7 @@ class Engine:
             received_cards = self.gen.deal_card(self.num_of_picks)
             self.current_player.receive(received_cards)
             self.pick_mode = False
-            self.num_of_picks = 2
+            self.num_of_picks = 0
             self._next_player()
 
         else:
@@ -312,7 +309,7 @@ class Engine:
             except ValueError:
                 raise InvalidSuitError(f"Invalid suit: {suit}. Must be one of {list(Suit)}.")
     
-    def save(self, path):
+    def save(self, path) -> bool:
         """
         Appends a new game event to the JSON file while preserving existing data.
         """
@@ -344,6 +341,7 @@ class Engine:
     def _next_player(self, skip=1):
 
         n = self.players.index(self.current_player)
+
         try:
             self.current_player = self.players[n + skip]
         except IndexError:
@@ -367,7 +365,28 @@ class Engine:
                 received_card = self.gen.deal_card(1)
                 player.receive(received_card)
     
-    def _pick_two_logic(self) -> EngineResponse:
+    def _handle_defense(self, pick: int) -> EngineResponse:
+        """
+        Method to handle defence against picks
+        """
+
+        self.pile.append(self.selected_card)
+        self.current_player._cards.remove(self.selected_card)
+    
+        if (len(self.current_player._cards) == 0):
+            return self._game_over_logic()                       
+    
+        player = self.current_player.player_id
+        self._next_player()
+        self.num_of_picks += pick
+
+        return {"status": True, "type": "normal", "card": self.selected_card.serialize(), "player_id": player }
+
+    def _handle_pick(self, pick: int):
+        """
+        Method to handle pick logic
+        """
+
         self.pile.append(self.selected_card)
         self.current_player._cards.remove(self.selected_card)
 
@@ -375,25 +394,27 @@ class Engine:
             return self._game_over_logic()
                 
         self.pick_mode = True
-        self.pick = 2
-        player = self.current_player.player_id
-        self._next_player()
+        self.num_of_picks = self.pick = pick
 
-        return {"status": True, "type": "pick_2", "card": self.selected_card.serialize(), "player_id": player}
+        self._next_player()       
+    
+    def _pick_two_logic(self) -> EngineResponse:
+        """
+        Method to handle pick 2
+        """
+
+        self._handle_pick(2)
+
+        return {"status": True, "type": "pick_2", "card": self.selected_card.serialize(), "player_id": self.current_player.player_id}
 
     def _pick_three_logic(self) -> EngineResponse:
-        self.pile.append(self.selected_card)
-        self.current_player._cards.remove(self.selected_card)
+        """
+        Method to handle pick 3
+        """
 
-        if (len(self.current_player._cards) == 0):
-            return self._game_over_logic()
-                
-        self.pick_mode = True
-        self.pick = 3
-        player = self.current_player.player_id
-        self._next_player()
+        self._handle_pick(3)
 
-        return {"status": True, "type": "pick_3", "card": self.selected_card.serialize(), "player_id": player}
+        return {"status": True, "type": "pick_3", "card": self.selected_card.serialize(), "player_id": self.current_player.player_id}
 
     def _hold_on_logic(self) -> EngineResponse:
         self.pile.append(self.selected_card)
@@ -402,7 +423,7 @@ class Engine:
         if (len(self.current_player._cards) == 0):
             return self._game_over_logic()
         
-        return {"status": True, "type": "hold_on", "card": self.selected_card.serialize(), "player_id": self.current_player.player_id }
+        return {"status": True, "type": "hold_on", "card": self.selected_card.serialize(), "player_id": self.current_player.player_id}
 
     def _go_gen_logic(self) -> EngineResponse:
         self.pile.append(self.selected_card)
@@ -413,9 +434,6 @@ class Engine:
             return self._game_over_logic()
         
         player = self.current_player.player_id
-
-        self._next_player()
-        self._next_player()
 
         return {"status": True, "type": "general_market", "card": self.selected_card.serialize(), "player_id": player}
 
