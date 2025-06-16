@@ -176,7 +176,7 @@ class TestPickThreeLogic(unittest.TestCase):
         """
 
         # Define top pile card
-        pile = Card(Suit.CIRCLE, 2)
+        pile = Card(Suit.CIRCLE, 5)
 
         # Define player cards
         card1 = Card(Suit.CIRCLE, 3)
@@ -244,6 +244,9 @@ class TestPickThreeLogic(unittest.TestCase):
         # Initialize test engine
         w = TestWhot(pile, test_players)
 
+        # Enable pick three mode
+        w.pick_three_enabled = True
+
         # Start game
         w.start_game()
 
@@ -290,6 +293,9 @@ class TestPickThreeLogic(unittest.TestCase):
 
         # Initialize test engine
         w = TestWhot(pile, test_players)
+
+        # Enable pick three
+        w.pick_three_enabled = True
 
         # Start game
         w.start_game()
