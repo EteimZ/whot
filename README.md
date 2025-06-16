@@ -1,5 +1,17 @@
+<div align="center">
 
-![whot](https://raw.githubusercontent.com/EteimZ/whot/refs/heads/main/logo.png)
+  <img src="https://raw.githubusercontent.com/EteimZ/whot/refs/heads/main/logo.png" alt="whot" />
+
+
+  <a href="https://pypi.org/project/whot" target="_blank">
+      <img src="https://img.shields.io/pypi/v/whot.svg?color=red" alt="Package version">
+  </a>
+  <a href="https://github.com/EteimZ/whot/blob/main/LICENSE">    
+      <img src="https://img.shields.io/pypi/l/whot.svg" alt="License">
+  </a>
+
+</div>
+
 
 **WHOT** is an implementation of the [Whot!](https://en.wikipedia.org/wiki/Whot!) game. It is an engine that implements all the necessary logic to implement your whot game.  
 
