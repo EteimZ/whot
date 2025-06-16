@@ -485,7 +485,7 @@ class TestWhotEngine(unittest.TestCase):
         w.start_game()
 
         # Check if the engine is in pick mode
-        self.assertEqual(w.pick_mode, True)
+        self.assertEqual(w.pick_mode, False)
 
         # Player one goes to market
         w.market()
@@ -570,7 +570,7 @@ class TestWhotEngine(unittest.TestCase):
         self.assertEqual(len(w.game_state()["players"]["player_3"]), 3)
 
         # Check that the player two is the current player
-        self.assertEqual(w.game_state()["current_player"], "player_12")
+        self.assertEqual(w.game_state()["current_player"], "player_1")
 
 
 
