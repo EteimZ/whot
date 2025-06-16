@@ -7,9 +7,11 @@
   <a href="https://pypi.org/project/whot" target="_blank">
       <img src="https://img.shields.io/pypi/v/whot.svg?color=red" alt="Package version">
   </a>
-
   <a href="https://github.com/EteimZ/whot/blob/main/LICENSE">    
       <img src="https://img.shields.io/pypi/l/whot.svg" alt="License">
+  </a>
+  <a href="https://github.com/EteimZ/whot/actions/workflows/python-tests.yml">
+      <img src="https://github.com/EteimZ/whot/actions/workflows/python-tests.yml/badge.svg" alt="Test Status">
   </a>
 
 </div>
