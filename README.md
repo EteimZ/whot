@@ -2,10 +2,12 @@
 
   <img src="https://raw.githubusercontent.com/EteimZ/whot/refs/heads/main/logo.png" alt="whot" />
 
+  <br>
 
   <a href="https://pypi.org/project/whot" target="_blank">
       <img src="https://img.shields.io/pypi/v/whot.svg?color=red" alt="Package version">
   </a>
+
   <a href="https://github.com/EteimZ/whot/blob/main/LICENSE">    
       <img src="https://img.shields.io/pypi/l/whot.svg" alt="License">
   </a>
