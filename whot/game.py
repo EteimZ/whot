@@ -403,18 +403,22 @@ class Engine:
         Method to handle pick 2
         """
 
+        player = self.current_player.player_id
+
         self._handle_pick(2)
 
-        return {"status": True, "type": "pick_2", "card": self.selected_card.serialize(), "player_id": self.current_player.player_id}
+        return {"status": True, "type": "pick_2", "card": self.selected_card.serialize(), "player_id": player}
 
     def _pick_three_logic(self) -> EngineResponse:
         """
         Method to handle pick 3
         """
 
+        player = self.current_player.player_id
+
         self._handle_pick(3)
 
-        return {"status": True, "type": "pick_3", "card": self.selected_card.serialize(), "player_id": self.current_player.player_id}
+        return {"status": True, "type": "pick_3", "card": self.selected_card.serialize(), "player_id": player}
 
     def _hold_on_logic(self) -> EngineResponse:
         self.pile.append(self.selected_card)
