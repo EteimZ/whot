@@ -9,41 +9,32 @@
 </head>
 
 <body>
-    <h1>Welcome to the Whot Game</h1>
+    <h1>Create Whot Game </h1>
     
-    <p id="current_player">Current Player: </p>
-    <p id="player_id">Player ID: </p>
-
-    <div id="board">
-        <div id="opponent_cards"></div>
-
-        <div id="middle_area">
-            <div id="middle_card">
-                <img id="card_top" src="assets/images/whot_back.png" alt="" width="100" height="120">    
-            </div>
-            <div id="market">
-                <img src="assets/images/whot_back.png" alt="" width="100" height="120">    
-            </div>
-        </div>
-
-        <div id="player_cards"></div>
+    <div>
+        <a href="/game"> New Game</a>
+       
+            
+        <input type="text" id="game_id" name="game_id" placeholder="Enter Game ID">
+        <button type="submit">Join Game</button>
         
     </div>
-
-    <div class="actions">
-        <a class="action new" href="/">New</a>
-        <a class="action join" href="">Join</a>
-    </div>
-
-    <div id="i_need" style="visibility: hidden; margin-top: 10px;">
-            <button id="circle"> Circle </button>
-            <button id="square"> Square </button>
-            <button id="star"> Star </button>
-            <button id="cross"> Cross </button>
-            <button id="triangle"> Triangle </button>
-    </div>
-
-    <script src="script.js"></script>
+    
 </body>
+
+<script>
+const gameIdInput = document.getElementById('game_id');
+const joinButton = document.querySelector('button[type="submit"]');
+
+joinButton.addEventListener('click', function(event) {
+    // event.preventDefault();
+    const gameId = gameIdInput.value.trim();
+    if (gameId) {
+        window.location.href = `${window.location.href}game?join=${gameId}`;
+    } else {
+        alert('Please enter a valid Game ID.');
+    }
+});
+</script>
 
 </html>

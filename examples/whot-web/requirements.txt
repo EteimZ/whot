@@ -1,2 +1,5 @@
 websockets==13.0.1
 aiohttp
+whot
+python-dotenv
+aiohttp-jinja2

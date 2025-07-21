@@ -18,13 +18,13 @@ function initGame(websocket) {
 
 function addMiddleCardImage(text) {
     const cardImg = document.getElementById("card_top");
-
-    const card = text.toLowerCase().split(" ");
+    const face = text["face"]
+    const suit = text["suit"].toLowerCase();
 
     let path;
 
-    if (card[1] != 'whot') {
-        path = `assets/images/${card[1]}/${card[0]}_${card[1]}.png`
+    if (suit != 'whot') {
+        path = `assets/images/${suit}/${face}_${suit}.png`
     } else {
         path = `assets/images/20_whot.png`
     }
@@ -61,18 +61,20 @@ function addPlayerCardImages(cards, websocket, player_id) {
         // Create a new image element
         const newCard = document.createElement('img');
 
-        const card = cards[i].toLowerCase().split(" ");
+        // const card = cards[i].toLowerCase().split(" ");
+        const face = cards[i]["face"]
+        const suit = cards[i]["suit"].toLowerCase();
 
         // Set attributes for the image
-        if (card[1] != 'whot') {
-            newCard.src = `assets/images/${card[1]}/${card[0]}_${card[1]}.png`; // Path to the image
+        if (suit != 'whot') {
+            newCard.src = `assets/images/${suit}/${face}_${suit}.png`; // Path to the image
         } else {
             newCard.src = `assets/images/20_whot.png`
         }
         newCard.alt = 'Player Card'; // Alternative text
         newCard.width = 100; // Set width
         newCard.height = 120; // Set height
-        console.log('Card: ', card[0])
+
         console.log(player_id)
         newCard.onclick = () => {
             const event = {
@@ -92,38 +94,73 @@ function receiveMoves(websocket, player_id) {
     const current_player = document.getElementById("current_player");
 
     websocket.addEventListener("message", ({ data }) => {
-        console.log(data)
+
         const event = JSON.parse(data);
 
         switch (event.type) {
+
             case "init":
                 // Create links for inviting the second player and spectators.
-                document.querySelector(".join").href = "?join=" + event.join;
+                const link = document.createElement("p");
+                link.innerText = window.location.href + "?join=" + event.join;
+                document.body.appendChild(link);
+                
                 //document.querySelector(".watch").href = "?watch=" + event.watch;
                 break;
-
+            
             case "play":
-                current_player.textContent = `Current Player: ${event.game_state["current_player"]}`
+                playCard(event, websocket);
+                break;
 
-                const opponent = Object.keys(event.game_state).filter(key => key.startsWith('player_')).filter(key => key !== `player_${event.player_id}`)
-
-                addMiddleCardImage(event.game_state["pile_top"])
-                addOponnentCardImages(event.game_state[opponent])
-                addPlayerCardImages(event.game_state[`player_${event.player_id}`], websocket, player_id)
+            case "normal":
+                playCard(event, websocket);
                 break;
             
+            case "hold_on":
+                playCard(event, websocket);
+                
+                // showMessage("Hold on!")
+                
+                break;
+            
+            case "general_market":
+                playCard(event, websocket);
+                
+                // showMessage("Go Gen!")
+                
+                break; 
+            
+            case "pick_2":
+                playCard(event, websocket);
+                
+                // showMessage("Pick two!")
+                
+                break; 
+
+            case "pick_3":
+                playCard(event, websocket);
+                
+                // showMessage("Pick three!")
+                
+                break;  
+
+            case "suspension":
+                playCard(event, websocket);
+                
+                // showMessage("Suspension!")
+                
+                break;                
+
             case "request":
                 current_player.textContent = `Current Player: ${event.game_state["current_player"]}`
 
-                const opponent2 = Object.keys(event.game_state).filter(key => key.startsWith('player_')).filter(key => key !== `player_${event.player_id}`)
+                const opponent2 = Object.keys(event.game_state["players"]).filter(key => key !== `player_${event.player_id}`)
 
                 let div = document.getElementById("i_need");
 
                 addMiddleCardImage(event.game_state["pile_top"])
-                addOponnentCardImages(event.game_state[opponent2])
-                console.log(player_id)
-                console.log(event.player_id)
-                addPlayerCardImages(event.game_state[`player_${event.player_id}`], websocket, player_id)
+                addOponnentCardImages(event.game_state["players"][opponent2[0]])
+                addPlayerCardImages(event.game_state["players"][`player_${event.player_id}`], websocket, player_id)
 
                 div.style.visibility = "visible";
 
@@ -147,7 +184,7 @@ function receiveMoves(websocket, player_id) {
                 break;
             
             case "message":
-                console.log(event.message)
+                showMessage(event.message)
                 break;
             
             case "failed":
@@ -166,6 +203,16 @@ function receiveMoves(websocket, player_id) {
 
 function showMessage(message) {
     window.setTimeout(() => window.alert(message), 50);
+}
+
+function playCard(event, websocket){
+    current_player.textContent = `Current Player: ${event.game_state["current_player"]}`
+
+    const opponent = Object.keys(event.game_state["players"]).filter(key => key !== `player_${event.player_id}`)
+
+    addMiddleCardImage(event.game_state["pile_top"])
+    addOponnentCardImages(event.game_state["players"][opponent[0]])
+    addPlayerCardImages(event.game_state["players"][`player_${event.player_id}`], websocket, player_id)
 }
 
 function sendMoves(websocket, card, playBtn) {
@@ -195,7 +242,9 @@ window.addEventListener("DOMContentLoaded", () => {
     const player_id = document.getElementById("player_id");
     const i_need = document.getElementById("i_need");
     
-    const websocket = new WebSocket("ws://127.0.0.1:8765/");
+    console.log("Connecting to WebSocket...");
+    console.log(WEBSOCKET_URL)
+    const websocket = new WebSocket(WEBSOCKET_URL);
 
     initGame(websocket);
     receiveMoves(websocket, player_id);
@@ -221,4 +270,8 @@ window.addEventListener("DOMContentLoaded", () => {
             websocket.send(JSON.stringify(event));            
         }
     }
+
+    websocket.onclose = function(event) {
+        console.log("WebSocket closed:", event);
+    };
 });
