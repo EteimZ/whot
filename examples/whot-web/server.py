@@ -14,12 +14,14 @@ from whot.exceptions import (
 import json
 import secrets
 
+from dataclasses import dataclass
+
 # Todo:
 # Consider adding everything to a class
 # Work on individual messages in the play event. Done
 # Work on disconnections so users can that get disconnected can always reconnect
 # The game ends when all players have left, Add option for restart
-# Refactor code
+# Refactor code Done
 
 # 
 
@@ -60,19 +62,59 @@ class GameConnection:
 
         websockets.broadcast(self.connections.values(), json.dumps(event)) # type: ignore
 
+@dataclass
+class Message:
+    receiver_ids: list[str]
+    content: str
 
 class WhotServer:
-    pass
+    async def play(self):
+        pass
+    
+    async def handler(self):
+        pass
 
-async def send_event(socket_id, type, game: Whot, gameConnections: GameConnection):
-    for i, socket_id in enumerate(gameConnections.connections, start=1):
+    async def start(self):
+        pass
+
+    async def join(self):
+        pass
+
+    async def send_event_to_all(self):
+        pass
+
+    async def send_event_to_one(self):
+        pass
+
+async def send_event_to_all( type, game: Whot, gameConnections: GameConnection, message: Message | None = None):
+    for socket_id in gameConnections.connections:
         event = {
             "type": type,
-            "player_id": i,
-            "game_state": serialize_game_view(game.view(f"player_{i}"))
+            "player_id": socket_id,
+            "game_state": serialize_game_view(game.view(socket_id))
         }
 
-        await gameConnections.send(socket_id, event)    
+        await gameConnections.send(socket_id, event)
+
+        if message != None:
+            if socket_id in message.receiver_ids:
+            # Notify the player to pick two cards
+
+                event = {
+                    "type": "message",
+                    "message": message.content
+                }
+                                    
+                await gameConnections.send(socket_id, event)
+
+async def send_event_to_one(socket_id, type, game: Whot, gameConnections: GameConnection):
+    event = {
+        "type": type,
+        "player_id": socket_id,
+        "game_state": serialize_game_view(game.view(socket_id))
+    }
+
+    await gameConnections.send(socket_id, event)
 
 
 
@@ -89,30 +131,16 @@ async def play(websocket: ClientConnection, game: Whot, player_id: str, gameConn
 
     game.start_game()
 
-    for i, socket_id in enumerate(gameConnections.connections, start=1):
-        event = {
-            "type": "play",
-            "player_id": i,
-            "game_state": serialize_game_view(game.view(f"player_{i}"))
-        }
-
-        await gameConnections.send(socket_id, event)
+    await send_event_to_all("play", game, gameConnections)
 
     if game.request_mode == True:
         socket_id = game.current_player.player_id
-        
-        event = {
-            "type": "request",
-            "player_id": 1,
-            "game_state": serialize_game_view(game.view(f"player_1"))
-        }
-
-        await gameConnections.send(socket_id, event)
+        await send_event_to_one(socket_id, "request", game, gameConnections)
     
     async for message in websocket:
         
         event = json.loads(message)
-        
+
         if event["type"] == "play":           
             if event["player_id"] == game.game_state()["current_player"]:
 
@@ -125,44 +153,22 @@ async def play(websocket: ClientConnection, game: Whot, player_id: str, gameConn
 
                         if result["type"] == "pick_2":
 
-                            for i, socket_id in enumerate(gameConnections.connections, start=1):
-                                # Notify all players of the result
-                                event = {
-                                    "type": result["type"],
-                                    "player_id": i,
-                                    "game_state": serialize_game_view(game.view(f"player_{i}"))
-                                }
-                                await gameConnections.send(socket_id, event)
-
-                                if socket_id == game.current_player.player_id:
-                                    # Notify the player to pick two cards
-
-                                    event = {
-                                        "type": "message",
-                                        "message": "Pick two! You have been asked to pick two cards."
-                                    }
-                                
-                                    await gameConnections.send(socket_id, event)
+                            message = Message(
+                                receiver_ids=[game.current_player.player_id], 
+                                content="Pick two! You have been asked to pick two cards.")
+                            
+                            await send_event_to_all(result["type"], game, gameConnections, message)
 
                         elif result["type"] == "general_market":
 
-                            for i, socket_id in enumerate(gameConnections.connections, start=1):
-                                event = {
-                                    "type": result["type"],
-                                    "player_id": i,
-                                    "game_state": serialize_game_view(game.view(f"player_{i}"))
-                                }
-                                await gameConnections.send(socket_id, event)
-
-                                if socket_id != game.current_player.player_id:
-                                    # Notify the player to pick two cards
-
-                                    event = {
-                                        "type": "message",
-                                        "message": "Everyone Go gen."
-                                    }
-                                
-                                    await gameConnections.send(socket_id, event)
+                            other_players = list(gameConnections.connections.keys())
+                            other_players.remove(game.current_player.player_id)
+                        
+                            message = Message(
+                                receiver_ids=other_players, 
+                                content="Everyone Go gen.")
+                            
+                            await send_event_to_all(result["type"], game, gameConnections, message)
                         
                         elif result["type"] == "suspension":
                             try:
@@ -171,23 +177,12 @@ async def play(websocket: ClientConnection, game: Whot, player_id: str, gameConn
                             except IndexError:
                                 current_player_index = len(game.players) - 1
                                 suspended_player_id = game.players[current_player_index].player_id
-
-                            for i, socket_id in enumerate(gameConnections.connections, start=1):
-                                event = {
-                                    "type": result["type"],
-                                    "player_id": i,
-                                    "game_state": serialize_game_view(game.view(f"player_{i}"))
-                                }
-                                await gameConnections.send(socket_id, event)
-
-                                if socket_id == suspended_player_id:
-                                    # Notify the player that they are suspended
-                                    event = {
-                                        "type": "message",
-                                        "message": "You have been suspended."
-                                    }
-                                
-                                    await gameConnections.send(suspended_player_id, event)
+                            
+                            message = Message(
+                                receiver_ids=[suspended_player_id], 
+                                content="You have been suspended.")
+                            
+                            await send_event_to_all(result["type"], game, gameConnections, message)
 
                         elif result["type"] == "hold_on":
                             try:
@@ -196,75 +191,48 @@ async def play(websocket: ClientConnection, game: Whot, player_id: str, gameConn
                             except IndexError:
                                 current_player_index = 0
                                 on_hold_player_id = game.players[current_player_index].player_id
+                            
+                            message = Message(
+                                receiver_ids=[on_hold_player_id], 
+                                content="You have been placed on hold.")
+                            
+                            await send_event_to_all(result["type"], game, gameConnections, message)
 
-                            for i, socket_id in enumerate(gameConnections.connections, start=1):
-                                event = {
-                                    "type": result["type"],
-                                    "player_id": i,
-                                    "game_state": serialize_game_view(game.view(f"player_{i}"))
-                                }
-                                await gameConnections.send(socket_id, event)
-
-                                if socket_id == on_hold_player_id:
-                                    # Notify the player that they are suspended
-                                    event = {
-                                        "type": "message",
-                                        "message": "You have been placed on hold."
-                                    }
-                                
-                                    await gameConnections.send(on_hold_player_id, event)
                         else:
 
-                            for i, socket_id in enumerate(gameConnections.connections, start=1):
-                                event = {
-                                    "type": result["type"],
-                                    "player_id": i,
-                                    "game_state": serialize_game_view(game.view(f"player_{i}"))
-                                }
-                                await gameConnections.send(socket_id, event)
-                                
-                                if socket_id == game.current_player.player_id:
-                                    # Notify the player that they are suspended
-                                    event = {
-                                        "type": "message",
-                                        "message": "Your turn to play."
-                                    }
-                                
-                                    await gameConnections.send(socket_id, event)
+                            message = Message(
+                                receiver_ids=[game.current_player.player_id], 
+                                content="Your turn to play.")
+                            
+                            await send_event_to_all(result["type"], game, gameConnections, message)
                     
                     elif result['type'] == "request":
 
                         current_player = game.current_player.player_id
 
-                        for i, socket_id in enumerate(gameConnections.connections, start=1):
+                        for socket_id in gameConnections.connections:
 
                             if socket_id == current_player:
                                 
                                 event = {
                                     "type": "request",
-                                    "player_id": i,
-                                    "game_state": serialize_game_view(game.view(f"player_{i}"))
+                                    "player_id": socket_id,
+                                    "game_state": serialize_game_view(game.view(socket_id))
                                 }
 
                             else:
 
                                 event = {
                                     "type": "play",
-                                    "player_id": i,
-                                    "game_state": serialize_game_view(game.view(f"player_{i}"))
+                                    "player_id": socket_id,
+                                    "game_state": serialize_game_view(game.view(socket_id))
                                 }
                             
                             await gameConnections.send(socket_id, event)
 
                     elif result['status'] == False:
 
-                        for i, socket_id in enumerate(gameConnections.connections, start=1):
-                            event = {
-                                "type": result["type"],
-                                "player_id": i,
-                                "game_state": serialize_game_view(game.view(f"player_{i}"))
-                            }
-                            await gameConnections.send(socket_id, event)
+                        await send_event_to_all(result["type"], game, gameConnections)
                         
                         event = {
                             "type": "win",
@@ -301,6 +269,7 @@ async def play(websocket: ClientConnection, game: Whot, player_id: str, gameConn
                         "message": "Invalid card"
                     }
                     await websocket.send(json.dumps(event))
+
                 except InvalidSuitError:
                     event = {
                         "type": "message",
@@ -324,28 +293,17 @@ async def play(websocket: ClientConnection, game: Whot, player_id: str, gameConn
                 await websocket.send(json.dumps(event))
 
         elif event["type"] == "market":
-
+            
             if event["player_id"] == game.game_state()["current_player"]:
 
                 game.market()
 
-                for i, socket_id in enumerate(gameConnections.connections, start=1):
-                    event = {
-                        "type": "play",
-                        "player_id": i,
-                        "game_state": serialize_game_view(game.view(f"player_{i}"))
-                    }
-
-                    await gameConnections.send(socket_id, event)
-
-                    if socket_id == game.current_player.player_id:
-                        # Notify the player that they are suspended
-                        event = {
-                            "type": "message",
-                            "message": "Your turn to play."
-                        }
-                    
-                        await gameConnections.send(socket_id, event)
+                message = Message(
+                    receiver_ids=[game.current_player.player_id], 
+                    content="Your turn to play."
+                )
+                            
+                await send_event_to_all("play", game, gameConnections, message)
                     
 
         elif event["type"] == "request":
@@ -355,13 +313,13 @@ async def play(websocket: ClientConnection, game: Whot, player_id: str, gameConn
 
             card = str(game.request(suit)['requested_suit'])
 
-            for i, socket_id in enumerate(gameConnections.connections, start=1):
+            for socket_id in gameConnections.connections:
 
                 if socket_id != requester:
                     event = {
                         "type": "request_card",
                         "message": f"{requester} requested for {card}",
-                        "game_state": serialize_game_view(game.view(f"player_{i}"))
+                        "game_state": serialize_game_view(game.view(socket_id))
                     }
 
                     await gameConnections.send(socket_id, event)
@@ -377,6 +335,10 @@ async def join(websocket: ClientConnection, join_key):
         
         await gameConnection.broadcast(event)
         
+        player_id = gameConnection.add_connection(websocket)
+
+        await play(websocket, gameConnection.game, player_id, gameConnection)
+        
     except KeyError:
         await websocket.send(json.dumps({
             "type": "message",
@@ -384,9 +346,6 @@ async def join(websocket: ClientConnection, join_key):
         }))
         await websocket.close()
 
-    player_id = gameConnection.add_connection(websocket)
-
-    await play(websocket, gameConnection.game, player_id, gameConnection)
 
 async def start(websocket: ClientConnection):
 

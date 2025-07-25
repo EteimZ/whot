@@ -104,8 +104,6 @@ function receiveMoves(websocket, player_id) {
                 const link = document.createElement("p");
                 link.innerText = window.location.href + "?join=" + event.join;
                 document.body.appendChild(link);
-                
-                //document.querySelector(".watch").href = "?watch=" + event.watch;
                 break;
             
             case "play":
@@ -118,49 +116,34 @@ function receiveMoves(websocket, player_id) {
             
             case "hold_on":
                 playCard(event, websocket);
-                
-                // showMessage("Hold on!")
-                
                 break;
             
             case "general_market":
                 playCard(event, websocket);
-                
-                // showMessage("Go Gen!")
-                
                 break; 
             
             case "pick_2":
                 playCard(event, websocket);
-                
-                // showMessage("Pick two!")
-                
                 break; 
 
             case "pick_3":
                 playCard(event, websocket);
-                
-                // showMessage("Pick three!")
-                
                 break;  
 
             case "suspension":
                 playCard(event, websocket);
-                
-                // showMessage("Suspension!")
-                
                 break;                
 
             case "request":
                 current_player.textContent = `Current Player: ${event.game_state["current_player"]}`
 
-                const opponent2 = Object.keys(event.game_state["players"]).filter(key => key !== `player_${event.player_id}`)
+                const opponent2 = Object.keys(event.game_state["players"]).filter(key => key !== event.player_id)
 
                 let div = document.getElementById("i_need");
 
                 addMiddleCardImage(event.game_state["pile_top"])
                 addOponnentCardImages(event.game_state["players"][opponent2[0]])
-                addPlayerCardImages(event.game_state["players"][`player_${event.player_id}`], websocket, player_id)
+                addPlayerCardImages(event.game_state["players"][event.player_id], websocket, player_id)
 
                 div.style.visibility = "visible";
 
@@ -208,11 +191,11 @@ function showMessage(message) {
 function playCard(event, websocket){
     current_player.textContent = `Current Player: ${event.game_state["current_player"]}`
 
-    const opponent = Object.keys(event.game_state["players"]).filter(key => key !== `player_${event.player_id}`)
+    const opponent = Object.keys(event.game_state["players"]).filter(key => key !== event.player_id)
 
     addMiddleCardImage(event.game_state["pile_top"])
     addOponnentCardImages(event.game_state["players"][opponent[0]])
-    addPlayerCardImages(event.game_state["players"][`player_${event.player_id}`], websocket, player_id)
+    addPlayerCardImages(event.game_state["players"][event.player_id], websocket, player_id)
 }
 
 function sendMoves(websocket, card, playBtn) {
@@ -255,11 +238,12 @@ window.addEventListener("DOMContentLoaded", () => {
             type: "market",
             player_id: player[1]
         };
+        console.log(event)
         console.log("Market!!")
         websocket.send(JSON.stringify(event));        
     }
 
-    for ( const button of i_need.children){
+    for (const button of i_need.children){
         button.onclick = () => {
             const event = {
                 type: "request",
