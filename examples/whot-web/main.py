@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 import jinja2
 from websockets.asyncio.server import serve
 
-from server import handler
+from server import WhotServer
 
 load_dotenv()
 
@@ -17,6 +17,7 @@ WEBSOCKET_PORT = int(os.environ.get("WEBSOCKET_PORT", 8765))
 
 # Create an aiohttp web app
 app = web.Application()
+whot_server = WhotServer()
 
 aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader('.'))
 
@@ -28,6 +29,9 @@ async def handle_game(request):
     return aiohttp_jinja2.render_template("game.html", request, context={
         "websocket_url": f"ws://{ADDRESS}:{WEBSOCKET_PORT}"
     })
+
+async def handler(websocket):
+    await whot_server.handle(websocket)
 
 # WebSocket server function
 async def websocket_server():
