@@ -60,16 +60,18 @@ class Message:
 
 class WhotServer:
 
-    async def start(self, websocket: ClientConnection):
-
-        self.game = Whot()
-        self.gameConnection = GameConnection(self.game)
+    def __init__(self):
         self.JOIN = {}
 
-        player_id = self.gameConnection.add_connection(websocket)
+    async def start(self, websocket: ClientConnection):
+
+        game = Whot()
+        gameConnection = GameConnection(game)
+
+        player_id = gameConnection.add_connection(websocket)
 
         join_key = secrets.token_urlsafe(4)
-        self.JOIN[join_key] = self.gameConnection
+        self.JOIN[join_key] = gameConnection
 
         try:
             server_event = {
@@ -78,24 +80,24 @@ class WhotServer:
             }
 
             await websocket.send(json.dumps(server_event))
-            await self.play(websocket, self.game, player_id, self.gameConnection)
+            await self.play(websocket, game, player_id, gameConnection)
         finally:
             del self.JOIN[join_key]
 
     async def join(self, websocket: ClientConnection, join_key):
         try:
-            self.gameConnection: GameConnection = self.JOIN[join_key]
+            gameConnection: GameConnection = self.JOIN[join_key]
             
             server_event = {
                 "type": "message",
                 "message": "New Player Joined"
             }
             
-            player_id = self.gameConnection.add_connection(websocket)
+            player_id = gameConnection.add_connection(websocket)
 
-            await self.gameConnection.broadcast(server_event)
+            await gameConnection.broadcast(server_event)
             
-            await self.play(websocket, self.gameConnection.game, player_id, self.gameConnection)
+            await self.play(websocket, gameConnection.game, player_id, gameConnection)
             
         except KeyError:
             await websocket.send(json.dumps({
@@ -104,7 +106,7 @@ class WhotServer:
             }))
             await websocket.close()
 
-    async def play(self, websocket: ClientConnection, game: Whot, player_id: str, gameConnections: GameConnection):
+    async def play(self, websocket: ClientConnection, game: Whot, player_id: str, gameConnection: GameConnection):
         server_event = {
             "type": "player_id",
             "player_id": player_id,
@@ -112,16 +114,16 @@ class WhotServer:
 
         await websocket.send(json.dumps(server_event)) 
 
-        while gameConnections.num_of_connections < len(game.players):
+        while gameConnection.num_of_connections < len(game.players):
             await asyncio.sleep(1)
 
         game.start_game()
 
-        await self.send_event_to_all("play")
+        await self.send_event_to_all("play", game, gameConnection)
 
         if game.request_mode == True:
             socket_id = game.current_player.player_id
-            await self.send_event_to_one(socket_id, "request")
+            await self.send_event_to_one(socket_id, "request", game, gameConnection)
         
         async for message in websocket:
             
@@ -138,30 +140,30 @@ class WhotServer:
                         if result["status"] == True and result["type"] != "request":
 
                             if result["type"] == "pick_2":
-                                await self.handle_pick_two()   
+                                await self.handle_pick_two(game, gameConnection)   
 
                             elif result["type"] == "general_market":
-                                await self.handle_general_market()
+                                await self.handle_general_market(game, gameConnection)
                             
                             elif result["type"] == "suspension":
-                                await self.handle_suspension()
+                                await self.handle_suspension(game, gameConnection)
 
                             elif result["type"] == "hold_on":
-                                await self.handle_hold_on()
+                                await self.handle_hold_on(game, gameConnection)
 
                             else:
                                 message = Message(
                                     receiver_ids=[game.current_player.player_id], 
                                     content="Your turn to play.")
                                 
-                                await self.send_event_to_all(result["type"], message)
+                                await self.send_event_to_all(result["type"], game, gameConnection, message)
                         
                         elif result['type'] == "request":
-                            await self.handle_request()
+                            await self.handle_request(game, gameConnection)
 
                         elif result['status'] == False:
 
-                            await self.send_event_to_all(result["type"])
+                            await self.send_event_to_all(result["type"], game, gameConnection)
                             
                             server_event = {
                                 "type": "win",
@@ -169,7 +171,7 @@ class WhotServer:
                             }
                             game.save("game.json") # Todo: This could be improved
                             
-                            await gameConnections.broadcast(server_event)
+                            await gameConnection.broadcast(server_event)
                         
                     except GameNotStartedError:
                         server_event = {
@@ -232,7 +234,7 @@ class WhotServer:
                         content="Your turn to play."
                     )
                                 
-                    await self.send_event_to_all("play", message)
+                    await self.send_event_to_all("play",  game, gameConnection, message)
 
             elif client_event["type"] == "request":
                 suit = client_event["suit"]
@@ -241,7 +243,7 @@ class WhotServer:
 
                 card = str(game.request(suit)['requested_suit'])
 
-                for socket_id in gameConnections.connections:
+                for socket_id in gameConnection.connections:
 
                     if socket_id != requester:
                         server_event = {
@@ -250,64 +252,64 @@ class WhotServer:
                             "game_state": serialize_game_view(game.view(socket_id))
                         }
 
-                        await gameConnections.send(socket_id, server_event)
+                        await gameConnection.send(socket_id, server_event)
 
-    async def handle_pick_two(self):
+    async def handle_pick_two(self, game: Whot, gameConnection: GameConnection):
         message = Message(
-            receiver_ids=[self.game.current_player.player_id], 
+            receiver_ids=[game.current_player.player_id], 
             content="Pick two! You have been asked to pick two cards.")
         
-        await self.send_event_to_all("pick_2", message)
+        await self.send_event_to_all("pick_2", game, gameConnection, message)
 
-    async def handle_general_market(self):
-        other_players = list(self.gameConnection.connections.keys())
-        other_players.remove(self.game.current_player.player_id)
+    async def handle_general_market(self, game: Whot, gameConnection: GameConnection):
+        other_players = list(gameConnection.connections.keys())
+        other_players.remove(game.current_player.player_id)
     
         message = Message(
             receiver_ids=other_players, 
             content="Everyone Go gen.")
         
-        await self.send_event_to_all("general_market", message)
+        await self.send_event_to_all("general_market", game, gameConnection, message)
 
-    async def handle_suspension(self):
+    async def handle_suspension(self, game: Whot, gameConnection: GameConnection):
         try:
-            current_player_index = self.game.players.index(self.game.current_player) - 1
-            suspended_player_id = self.game.players[current_player_index].player_id
+            current_player_index = game.players.index(game.current_player) - 1
+            suspended_player_id = game.players[current_player_index].player_id
         except IndexError:
-            current_player_index = len(self.game.players) - 1
-            suspended_player_id = self.game.players[current_player_index].player_id
+            current_player_index = len(game.players) - 1
+            suspended_player_id = game.players[current_player_index].player_id
         
         message = Message(
             receiver_ids=[suspended_player_id], 
             content="You have been suspended.")
         
-        await self.send_event_to_all("suspension", message)
+        await self.send_event_to_all("suspension", game, gameConnection, message)
     
-    async def handle_hold_on(self):
+    async def handle_hold_on(self, game: Whot, gameConnection: GameConnection):
         try:
-            current_player_index = self.game.players.index(self.game.current_player) + 1
-            on_hold_player_id = self.game.players[current_player_index].player_id
+            current_player_index = game.players.index(game.current_player) + 1
+            on_hold_player_id = game.players[current_player_index].player_id
         except IndexError:
             current_player_index = 0
-            on_hold_player_id = self.game.players[current_player_index].player_id
+            on_hold_player_id = game.players[current_player_index].player_id
         
         message = Message(
             receiver_ids=[on_hold_player_id], 
             content="You have been placed on hold.")
         
-        await self.send_event_to_all("hold_on", message)
+        await self.send_event_to_all("hold_on", game, gameConnection, message)
 
-    async def handle_request(self):
-        current_player = self.game.current_player.player_id
+    async def handle_request(self, game: Whot, gameConnection: GameConnection):
+        current_player = game.current_player.player_id
 
-        for socket_id in self.gameConnection.connections:
+        for socket_id in gameConnection.connections:
 
             if socket_id == current_player:
                 
                 server_event = {
                     "type": "request",
                     "player_id": socket_id,
-                    "game_state": serialize_game_view(self.game.view(socket_id))
+                    "game_state": serialize_game_view(game.view(socket_id))
                 }
 
             else:
@@ -315,20 +317,20 @@ class WhotServer:
                 server_event = {
                     "type": "play",
                     "player_id": socket_id,
-                    "game_state": serialize_game_view(self.game.view(socket_id))
+                    "game_state": serialize_game_view(game.view(socket_id))
                 }
             
-            await self.gameConnection.send(socket_id, server_event)
+            await gameConnection.send(socket_id, server_event)
 
-    async def send_event_to_all(self, type, message: Message | None = None):
-        for socket_id in self.gameConnection.connections:
+    async def send_event_to_all(self, type, game: Whot, gameConnection: GameConnection, message: Message | None = None):
+        for socket_id in gameConnection.connections:
             server_event = {
                 "type": type,
                 "player_id": socket_id,
-                "game_state": serialize_game_view(self.game.view(socket_id))
+                "game_state": serialize_game_view(game.view(socket_id))
             }
 
-            await self.gameConnection.send(socket_id, server_event)
+            await gameConnection.send(socket_id, server_event)
 
             if message != None:
                 if socket_id in message.receiver_ids:
@@ -339,16 +341,16 @@ class WhotServer:
                         "message": message.content
                     }
                                         
-                    await self.gameConnection.send(socket_id, server_event)
+                    await gameConnection.send(socket_id, server_event)
 
-    async def send_event_to_one(self, socket_id, type):
+    async def send_event_to_one(self, socket_id, type, game: Whot, gameConnection: GameConnection):
         server_event = {
             "type": type,
             "player_id": socket_id,
-            "game_state": serialize_game_view(self.game.view(socket_id))
+            "game_state": serialize_game_view(game.view(socket_id))
         }
 
-        await self.gameConnection.send(socket_id, server_event)
+        await gameConnection.send(socket_id, server_event)
 
     async def handle(self, websocket: ClientConnection):
         message = await websocket.recv()
