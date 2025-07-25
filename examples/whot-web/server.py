@@ -60,12 +60,11 @@ class Message:
 
 class WhotServer:
 
-    def __init__(self):
+    async def start(self, websocket: ClientConnection):
+
         self.game = Whot()
         self.gameConnection = GameConnection(self.game)
         self.JOIN = {}
-    
-    async def start(self, websocket: ClientConnection):
 
         player_id = self.gameConnection.add_connection(websocket)
 
@@ -139,54 +138,18 @@ class WhotServer:
                         if result["status"] == True and result["type"] != "request":
 
                             if result["type"] == "pick_2":
-
-                                message = Message(
-                                    receiver_ids=[game.current_player.player_id], 
-                                    content="Pick two! You have been asked to pick two cards.")
-                                
-                                await self.send_event_to_all(result["type"], message)
+                                await self.handle_pick_two()   
 
                             elif result["type"] == "general_market":
-
-                                other_players = list(gameConnections.connections.keys())
-                                other_players.remove(game.current_player.player_id)
-                            
-                                message = Message(
-                                    receiver_ids=other_players, 
-                                    content="Everyone Go gen.")
-                                
-                                await self.send_event_to_all(result["type"], message)
+                                await self.handle_general_market()
                             
                             elif result["type"] == "suspension":
-                                try:
-                                    current_player_index = game.players.index(game.current_player) - 1
-                                    suspended_player_id = game.players[current_player_index].player_id
-                                except IndexError:
-                                    current_player_index = len(game.players) - 1
-                                    suspended_player_id = game.players[current_player_index].player_id
-                                
-                                message = Message(
-                                    receiver_ids=[suspended_player_id], 
-                                    content="You have been suspended.")
-                                
-                                await self.send_event_to_all(result["type"], message)
+                                await self.handle_suspension()
 
                             elif result["type"] == "hold_on":
-                                try:
-                                    current_player_index = game.players.index(game.current_player) + 1
-                                    on_hold_player_id = game.players[current_player_index].player_id
-                                except IndexError:
-                                    current_player_index = 0
-                                    on_hold_player_id = game.players[current_player_index].player_id
-                                
-                                message = Message(
-                                    receiver_ids=[on_hold_player_id], 
-                                    content="You have been placed on hold.")
-                                
-                                await self.send_event_to_all(result["type"], message)
+                                await self.handle_hold_on()
 
                             else:
-
                                 message = Message(
                                     receiver_ids=[game.current_player.player_id], 
                                     content="Your turn to play.")
@@ -194,28 +157,7 @@ class WhotServer:
                                 await self.send_event_to_all(result["type"], message)
                         
                         elif result['type'] == "request":
-
-                            current_player = game.current_player.player_id
-
-                            for socket_id in gameConnections.connections:
-
-                                if socket_id == current_player:
-                                    
-                                    server_event = {
-                                        "type": "request",
-                                        "player_id": socket_id,
-                                        "game_state": serialize_game_view(game.view(socket_id))
-                                    }
-
-                                else:
-
-                                    server_event = {
-                                        "type": "play",
-                                        "player_id": socket_id,
-                                        "game_state": serialize_game_view(game.view(socket_id))
-                                    }
-                                
-                                await gameConnections.send(socket_id, server_event)
+                            await self.handle_request()
 
                         elif result['status'] == False:
 
@@ -309,6 +251,74 @@ class WhotServer:
                         }
 
                         await gameConnections.send(socket_id, server_event)
+
+    async def handle_pick_two(self):
+        message = Message(
+            receiver_ids=[self.game.current_player.player_id], 
+            content="Pick two! You have been asked to pick two cards.")
+        
+        await self.send_event_to_all("pick_2", message)
+
+    async def handle_general_market(self):
+        other_players = list(self.gameConnection.connections.keys())
+        other_players.remove(self.game.current_player.player_id)
+    
+        message = Message(
+            receiver_ids=other_players, 
+            content="Everyone Go gen.")
+        
+        await self.send_event_to_all("general_market", message)
+
+    async def handle_suspension(self):
+        try:
+            current_player_index = self.game.players.index(self.game.current_player) - 1
+            suspended_player_id = self.game.players[current_player_index].player_id
+        except IndexError:
+            current_player_index = len(self.game.players) - 1
+            suspended_player_id = self.game.players[current_player_index].player_id
+        
+        message = Message(
+            receiver_ids=[suspended_player_id], 
+            content="You have been suspended.")
+        
+        await self.send_event_to_all("suspension", message)
+    
+    async def handle_hold_on(self):
+        try:
+            current_player_index = self.game.players.index(self.game.current_player) + 1
+            on_hold_player_id = self.game.players[current_player_index].player_id
+        except IndexError:
+            current_player_index = 0
+            on_hold_player_id = self.game.players[current_player_index].player_id
+        
+        message = Message(
+            receiver_ids=[on_hold_player_id], 
+            content="You have been placed on hold.")
+        
+        await self.send_event_to_all("hold_on", message)
+
+    async def handle_request(self):
+        current_player = self.game.current_player.player_id
+
+        for socket_id in self.gameConnection.connections:
+
+            if socket_id == current_player:
+                
+                server_event = {
+                    "type": "request",
+                    "player_id": socket_id,
+                    "game_state": serialize_game_view(self.game.view(socket_id))
+                }
+
+            else:
+
+                server_event = {
+                    "type": "play",
+                    "player_id": socket_id,
+                    "game_state": serialize_game_view(self.game.view(socket_id))
+                }
+            
+            await self.gameConnection.send(socket_id, server_event)
 
     async def send_event_to_all(self, type, message: Message | None = None):
         for socket_id in self.gameConnection.connections:

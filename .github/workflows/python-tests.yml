@@ -1,4 +1,4 @@
-name: Python package
+name: WHOT Tests
 
 on:
   push:

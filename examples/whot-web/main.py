@@ -19,6 +19,7 @@ WEBSOCKET_PORT = int(os.environ.get("WEBSOCKET_PORT", 8765))
 app = web.Application()
 whot_server = WhotServer()
 
+
 aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader('.'))
 
 # Serve index.html
