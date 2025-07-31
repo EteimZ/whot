@@ -4,6 +4,15 @@ from collections import Counter
 from .game import Engine
 from .deck import Suit
 
+"""
+I want don't want the agents to be using the game engine internally.
+I want them to use the game engine externally.
+So A game starts 
+the agent calls the engine.play() method
+It would would use the game state to determine what to do next.
+If it see it is its turn, it will play a card.
+"""
+
 class BaseAgent(ABC):
     
     def __init__(self, agent_id, engine):

@@ -1,0 +1,85 @@
+body {
+    background-color: #121212;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    color: #f5f5f5;
+}
+
+h1 {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+    color: #FFD700;
+}
+
+p.description {
+    font-size: 1.1rem;
+    color: #ffffff;
+    margin-bottom: 2rem;
+}
+
+.actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.btn-primary {
+    background-color: #a1000d;
+    color: #ffffff;
+    padding: 0.8rem 1.5rem;
+    border: 2px solid #FFD700;
+    color: #FFD700;
+    border-radius: 30px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+}
+
+.input-container {
+    display: flex;
+    align-items: center;
+    border: 2px solid #555;
+    border-radius: 30px;
+    overflow: hidden;
+    padding: 0 0.5rem;
+    background-color: #1e1e1e;
+}
+
+input[type="text"] {
+    background-color: transparent;
+    border: none;
+    padding: 0.8rem 1rem;
+    outline: none;
+    font-size: 1rem;
+    color: #f5f5f5;
+    flex-grow: 1;
+}
+
+input[type="text"]::placeholder {
+    color: #888;
+}
+
+button.join {
+    background: none;
+    border: none;
+    padding: 0 1rem;
+    font-weight: bold;
+    color: #666;
+    cursor: not-allowed;
+}
+
+button.join.enabled {
+    color: #FFD700;
+    cursor: pointer;
+}

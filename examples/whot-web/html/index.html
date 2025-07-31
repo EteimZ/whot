@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="./css/index.css">
+  <title>Whot Game</title>
+</head>
+<body>
+  <h1>Create Whot Game</h1>
+  <p class="description">Play Whot with your friends by starting or joining a game using a link</p>
+  <div class="actions">
+    <a href="/game" class="btn-primary"> New Game</a>
+
+    <div class="input-container">
+      <input type="text" id="game_id" name="game_id" placeholder="Enter Game ID" oninput="toggleJoinButton()" />
+      <button id="joinBtn" class="join" disabled>Join</button>
+    </div>
+  </div>
+
+  <script>
+    const gameIdInput = document.getElementById('game_id');
+    const joinButton = document.getElementById('joinBtn');
+
+    joinButton.addEventListener('click', function(event) {
+        // event.preventDefault();
+        const gameId = gameIdInput.value.trim();
+        if (gameId) {
+            window.location.href = `${window.location.href}game?join=${gameId}`;
+        } else {
+            alert('Please enter a valid Game ID.');
+        }
+    });
+
+    function toggleJoinButton() {
+      const input = document.getElementById('game_id');
+      const button = document.getElementById('joinBtn');
+      if (input.value.trim()) {
+        button.disabled = false;
+        button.classList.add('enabled');
+      } else {
+        button.disabled = true;
+        button.classList.remove('enabled');
+      }
+    }
+  </script>
+</body>
+</html>
