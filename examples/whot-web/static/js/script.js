@@ -3,12 +3,10 @@ function initGame(websocket) {
         // Send an "init" event according to who is connecting.
         const params = new URLSearchParams(window.location.search);
         let event = { type: "init" };
+
         if (params.has("join")) {
             // Second player joins an existing game.
             event.join = params.get("join");
-        } else if (params.has("watch")) {
-            // Spectator watches an existing game.
-            event.watch = params.get("watch");
         } else {
             // First player starts a new game.
         }
@@ -61,7 +59,6 @@ function addPlayerCardImages(cards, websocket, player_id) {
         // Create a new image element
         const newCard = document.createElement('img');
 
-        // const card = cards[i].toLowerCase().split(" ");
         const face = cards[i]["face"]
         const suit = cards[i]["suit"].toLowerCase();
 
@@ -75,7 +72,6 @@ function addPlayerCardImages(cards, websocket, player_id) {
         newCard.width = 100; // Set width
         newCard.height = 120; // Set height
 
-        console.log(player_id)
         newCard.onclick = () => {
             const event = {
                 type: "play",
@@ -90,8 +86,7 @@ function addPlayerCardImages(cards, websocket, player_id) {
     }
 }
 
-function receiveMoves(websocket, player_id) {
-    const current_player = document.getElementById("current_player");
+function receiveEvents(websocket, player_id) {
 
     websocket.addEventListener("message", ({ data }) => {
 
@@ -100,82 +95,46 @@ function receiveMoves(websocket, player_id) {
         switch (event.type) {
 
             case "init":
-                // Create links for inviting the second player and spectators.
-                const link = document.createElement("p");
-                link.innerText = window.location.href + "?join=" + event.join;
-                document.body.appendChild(link);
+                // Create a container div for the join link
+                const joinDiv = document.createElement("div");
+                joinDiv.id = "join_link_container";
+
+                // Add description
+                const infoText = document.createElement("p");
+                infoText.textContent = "Share this link to invite:";
+                joinDiv.appendChild(infoText);
+
+                // Add the actual join link
+                const link = document.createElement("a");
+                link.href = window.location.href + "?join=" + event.join;
+                link.innerText = link.href;
+                joinDiv.appendChild(link);
+
+                // Append to the sidebar
+                const sidebar = document.getElementById("sidebar");
+                sidebar.appendChild(joinDiv);
                 break;
-            
+
+            case "start":
+                player_id.textContent = `Player_id: ${event.player_id}`
+                break;
+
             case "play":
-                playCard(event, websocket);
+                updateCards(event, websocket);
                 break;
-
-            case "normal":
-                playCard(event, websocket);
-                break;
-            
-            case "hold_on":
-                playCard(event, websocket);
-                break;
-            
-            case "general_market":
-                playCard(event, websocket);
-                break; 
-            
-            case "pick_2":
-                playCard(event, websocket);
-                break; 
-
-            case "pick_3":
-                playCard(event, websocket);
-                break;  
-
-            case "suspension":
-                playCard(event, websocket);
-                break;                
 
             case "request":
-                current_player.textContent = `Current Player: ${event.game_state["current_player"]}`
-
-                const opponent2 = Object.keys(event.game_state["players"]).filter(key => key !== event.player_id)
-
-                let div = document.getElementById("i_need");
-
-                addMiddleCardImage(event.game_state["pile_top"])
-                addOponnentCardImages(event.game_state["players"][opponent2[0]])
-                addPlayerCardImages(event.game_state["players"][event.player_id], websocket, player_id)
-
-                div.style.visibility = "visible";
-
-                break;
-            
-            case "request_card":
-                current_player.textContent = `Current Player: ${event.game_state["current_player"]}`
-                let div2 = document.getElementById("i_need")
-                div2.style.visibility = "hidden"
-                showMessage(event.message)
+                document.getElementById("suitModal").style.display = "flex";;
                 break;
 
             case "win":
-                showMessage(`Player ${event.winner} wins!`);
+                showNotification(`${event.winner} wins!`);
                 // No further messages are expected; close the WebSocket connection.
                 websocket.close(1000);
                 break;
-            
-            case "player_id":
-                player_id.textContent = `Player_id: ${event.player_id}`
-                break;
-            
-            case "message":
-                showMessage(event.message)
-                break;
-            
-            case "failed":
-                console.log(`${event.current_player} failed`)
-                break;
 
-            case "error":
-                showMessage(event.message);
+            case "message":
+                showNotification(event.message)
                 break;
 
             default:
@@ -184,11 +143,38 @@ function receiveMoves(websocket, player_id) {
     });
 }
 
-function showMessage(message) {
-    window.setTimeout(() => window.alert(message), 50);
+function showNotification(message) {
+    // Remove any existing notification
+    const existing = document.querySelector('.notification');
+    if (existing) {
+        existing.remove();
+    }
+
+    // Create new notification
+    const notification = document.createElement('div');
+    notification.className = 'notification';
+    notification.textContent = message;
+
+    // Add to page
+    document.body.appendChild(notification);
+
+    // Show with animation
+    setTimeout(() => {
+        notification.classList.add('show');
+    }, 10);
+
+    // Remove after 15 seconds
+    setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => {
+            if (notification.parentElement) {
+                notification.remove();
+            }
+        }, 300);
+    }, 15000);
 }
 
-function playCard(event, websocket){
+function updateCards(event, websocket) {
     current_player.textContent = `Current Player: ${event.game_state["current_player"]}`
 
     const opponent = Object.keys(event.game_state["players"]).filter(key => key !== event.player_id)
@@ -198,64 +184,40 @@ function playCard(event, websocket){
     addPlayerCardImages(event.game_state["players"][event.player_id], websocket, player_id)
 }
 
-function sendMoves(websocket, card, playBtn) {
-    // Don't send moves for a spectator watching a game.
-    const params = new URLSearchParams(window.location.search);
-    if (params.has("watch")) {
-        return;
-    }
-    console.log("Send moves")
-    // When clicking a column, send a "play" event for a move in that column.
-    playBtn.addEventListener("click", () => {
-        if (card.value) {
-            console.log(card.value)
-
-            const event = {
-                type: "play",
-                card: card.value,
-            };
-            websocket.send(JSON.stringify(event));
-        }
-    });
-}
-
 window.addEventListener("DOMContentLoaded", () => {
     // Open the WebSocket connection and register event handlers.
     const market = document.getElementById("market");
     const player_id = document.getElementById("player_id");
-    const i_need = document.getElementById("i_need");
-    
-    console.log("Connecting to WebSocket...");
-    console.log(WEBSOCKET_URL)
+    const modal = document.getElementById("suitModal");
+
     const websocket = new WebSocket(WEBSOCKET_URL);
 
     initGame(websocket);
-    receiveMoves(websocket, player_id);
+    receiveEvents(websocket, player_id);
 
+    // Add event handling on market card
     market.onclick = () => {
         const player = player_id.textContent.split(" ")
         const event = {
             type: "market",
             player_id: player[1]
         };
-        console.log(event)
-        console.log("Market!!")
-        websocket.send(JSON.stringify(event));        
+        websocket.send(JSON.stringify(event));
     }
 
-    for (const button of i_need.children){
+    // Make requests 
+    document.querySelectorAll(".suit-btn").forEach(button => {
         button.onclick = () => {
             const event = {
                 type: "request",
-                suit: button.id
+                suit: button.id,
             };
-            console.log("Request!!")
-            i_need.style.visibility = "hidden"
-            websocket.send(JSON.stringify(event));            
-        }
-    }
+            modal.style.display = "none";;
+            websocket.send(JSON.stringify(event));
+        };
+    });
 
-    websocket.onclose = function(event) {
+    websocket.onclose = function (event) {
         console.log("WebSocket closed:", event);
     };
 });

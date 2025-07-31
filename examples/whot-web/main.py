@@ -17,17 +17,18 @@ WEBSOCKET_PORT = int(os.environ.get("WEBSOCKET_PORT", 8765))
 
 # Create an aiohttp web app
 app = web.Application()
-whot_server = WhotServer()
 
+# Create an instance of the whot server
+whot_server = WhotServer()
 
 aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader('.'))
 
 # Serve index.html
 async def handle_index(request):
-    return web.FileResponse("index.html")
+    return web.FileResponse("html/index.html")
 
 async def handle_game(request):
-    return aiohttp_jinja2.render_template("game.html", request, context={
+    return aiohttp_jinja2.render_template("html/game.html", request, context={
         "websocket_url": f"ws://{ADDRESS}:{WEBSOCKET_PORT}"
     })
 
@@ -43,7 +44,7 @@ async def websocket_server():
 # Define routes
 app.router.add_get("/", handle_index)
 app.router.add_get("/game", handle_game)
-app.router.add_static("/", path=".", name="static")
+app.router.add_static("/", path="static", name="static")
 
 # Function to run the aiohttp server
 async def run_server():
